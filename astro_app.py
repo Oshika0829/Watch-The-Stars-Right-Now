@@ -3,9 +3,9 @@ import requests
 from streamlit_geolocation import streamlit_geolocation
 import math
 import time
+from datetime import datetime
 
 # --- データ定義 ---
-# ★★★ スポットリストを大幅に拡充 ★★★
 SPOTS = [
     {"name": "手賀沼公園", "lat": 35.8649, "lon": 140.0229, "darkness_level": 4},
     {"name": "筑波山（つつじヶ丘）", "lat": 36.2239, "lon": 140.1130, "darkness_level": 8},
@@ -21,14 +21,8 @@ SPOTS = [
 ]
 
 # --- 関数エリア ---
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371
-    dLat = math.radians(lat2 - lat1)
-    dLon = math.radians(lon2 - lon1)
-    a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
+# ★★★ キャッシュ機能を追加して、API呼び出しを効率化 ★★★
+@st.cache_data(ttl=600) # 10分間は同じ場所のデータを再利用する
 def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
     try:
@@ -37,6 +31,14 @@ def get_astro_data(latitude, longitude, api_key):
         return response.json()
     except requests.exceptions.RequestException:
         return None
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
+    a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
@@ -76,10 +78,18 @@ def get_moon_advice(moon_phase):
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
 
+# ★★★ 天気絵文字を返す新しい関数 ★★★
+def get_weather_emoji(cloudiness):
+    if cloudiness < 20:
+        return "☀️" # 快晴
+    elif cloudiness < 70:
+        return "☁️" # 曇り
+    else:
+        return "🌧️" # 曇り/雨
+
 # --- アプリ本体 ---
 st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon="🌠")
 
-# ★★★ タイトルと絵文字を変更 ★★★
 st.title("🌠 Watch The Stars Right Now!!! 🔭")
 st.write("今すぐ星が見える場所へ")
 
@@ -105,30 +115,16 @@ with col2:
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
 
 if location_data:
-    current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
-    if current_lat and current_lon:
-        # ★★★ 今日の月の解説コーナーを復活 ★★★
-        with st.expander("今日の月の様子は？"):
-            with st.spinner("月齢を取得中..."):
-                # 現在地の天気情報から月齢だけを取得
-                current_astro_data = get_astro_data(current_lat, current_lon, API_KEY)
-                if current_astro_data:
-                    moon_phase = current_astro_data["daily"][0]["moon_phase"]
-                    moon_name, moon_advice = get_moon_advice(moon_phase)
-                    st.info(f"今夜は『**{moon_name}**』です。\n\n{moon_advice}")
-                else:
-                    st.warning("月齢情報を取得できませんでした。")
-
     if st.button("この条件に合う、一番近い場所を探す！"):
+        current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
         if current_lat is None or current_lon is None:
             st.error("有効な位置情報が取得できませんでした。")
         else:
             with st.spinner("各候補地の天気情報を収集中...（少し時間がかかります）"):
-                # (ここから下の検索ロジックは変更なし)
                 viable_spots = []
                 for spot in SPOTS:
                     astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
-                    time.sleep(0.2)
+                    # API呼び出しの間に短い待機時間を設ける
                     if astro_data:
                         cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
                         limiting_mag = estimate_limiting_magnitude(spot["darkness_level"], cloudiness, moon_phase)
@@ -141,6 +137,7 @@ if location_data:
                             "limiting_mag": limiting_mag, "moon_phase": moon_phase,
                             "hourly_data": astro_data.get("hourly", [])
                         })
+                    time.sleep(0.1) # APIへの負荷を軽減
 
             st.header("③ 検索結果")
             if not viable_spots:
@@ -152,18 +149,39 @@ if location_data:
                     st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
                     st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
                     st.markdown("---")
+                    
                     st.write(f"**星空指数:** `{spot['star_index']}` / 100点 ({get_star_index_description(spot['star_index'])})")
                     st.write(f"**見える星の明るさ:** 約`{spot['limiting_mag']:.1f}` 等級まで期待できます")
                     st.caption(get_magnitude_description(spot['limiting_mag']))
+                    
+                    # ★★★ 3時間天気予報の表示を修正 ★★★
                     if spot["hourly_data"]:
                         st.write("**これからの天気（1時間ごと）**")
                         cols = st.columns(3)
                         for j in range(min(3, len(spot["hourly_data"]))):
-                            hour_data = spot["hourly_data"][j+1]
-                            time_str = time.strftime('%H時', time.localtime(hour_data["dt"]))
-                            cols[j].metric(label=time_str, value=f"{hour_data['temp']:.1f}℃", delta=f"{hour_data['clouds']}% 雲")
-                    Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['name'].replace(' ', '+')}"
-                    st.markdown(f"### [🗺️ Googleマップで場所を確認する]({Maps_url})")
+                            hour_data = spot["hourly_data"][j+1] # 1時間後から表示
+                            dt_object = datetime.fromtimestamp(hour_data["dt"])
+                            time_str = dt_object.strftime('%H時')
+                            with cols[j]:
+                                st.markdown(f"<div style='text-align: center;'>{time_str}</div>", unsafe_allow_html=True)
+                                emoji = get_weather_emoji(hour_data["clouds"])
+                                st.markdown(f"<div style='text-align: center; font-size: 2.5em; line-height: 1;'>{emoji}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='text-align: center;'>{hour_data['clouds']}%</div>", unsafe_allow_html=True)
+
+                    # ★★★ Googleマップリンクのサイズを修正 ★★★
+                    Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['lat']},{spot['lon']}"
+                    st.markdown(f"[🗺️ Googleマップで場所を確認する]({Maps_url})")
                     st.divider()
+
+st.divider()
+# ★★★ 月の様子を、常にページ下部に表示 ★★★
+st.header("今日の月の様子 🌕")
+# デフォルトの場所（茨城県阿見町）で月齢を取得
+AMI_LAT, AMI_LON = 36.0317, 140.2107 
+moon_data = get_astro_data(AMI_LAT, AMI_LON, API_KEY)
+if moon_data:
+    moon_phase = moon_data["daily"][0]["moon_phase"]
+    moon_name, moon_advice = get_moon_advice(moon_phase)
+    st.info(f"今夜は『**{moon_name}**』です。\n\n{moon_advice}")
 else:
-    st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
+    st.warning("月齢情報を取得できませんでした。")
