@@ -17,24 +17,32 @@ SPOTS = [
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371
     dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
-    a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) * math.sin(dLon / 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
+    a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
 def get_astro_data(latitude, longitude, api_key):
-    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,hourly,alerts&appid={api_key}&lang=ja&units=metric"
+    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
     try:
-        response = requests.get(url); response.raise_for_status(); return response.json()
-    except requests.exceptions.RequestException: return None
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException:
+        return None
+
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
     elif cloudiness <= 40: return 70
     elif cloudiness <= 70: return 40
     else: return 10
+
 def estimate_limiting_magnitude(darkness_level, cloudiness, moon_phase):
     base_mag = 2 + (darkness_level / 2)
     cloud_penalty = (cloudiness / 100) * 4
     moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 2
     limiting_magnitude = base_mag - cloud_penalty - moon_penalty
     return max(1.0, limiting_magnitude)
+
 def get_magnitude_description(magnitude):
     if magnitude < 2.0: return "都会の中心部レベル：1等星など、ごく明るい星がいくつか見える程度です。"
     elif magnitude < 3.0: return "都会の空レベル：オリオン座や北斗七星など、有名な星座の形が分かります。"
@@ -42,11 +50,13 @@ def get_magnitude_description(magnitude):
     elif magnitude < 5.0: return "暗い田舎の空レベル：たくさんの星が見え、天の川もぼんやりと見え始めます。"
     elif magnitude < 6.0: return "絶好の観測地レベル：天の川がはっきりと見え、流れ星にも期待が持てます。"
     else: return "最高クラスの星空：天の川の濃淡まで分かり、無数の星に圧倒される、一生に一度レベルの空です。"
+
 def get_star_index_description(index_value):
     if index_value >= 95: return "雲量10%以下。ほぼ雲のない快晴の空です。"
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
+
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -58,11 +68,23 @@ def get_moon_advice(moon_phase):
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
 
+def display_weather_3h(hourly_data):
+    st.write("### 3時間分の天気変化（1時間毎）")
+    cols = st.columns(3)
+    for i in range(3):
+        hour = hourly_data[i]
+        time_str = time.strftime('%H:%M', time.localtime(hour["dt"]))
+        clouds = hour["clouds"]
+        temp = hour["temp"]
+        desc = f"{time_str}\n☁️雲量: {clouds}%\n🌡️気温: {temp:.1f}℃"
+        cols[i].write(desc)
+
 # --- アプリ本体 ---
 st.title("Watch The Stars Right Now!!!")
 st.write("今すぐ星が見える場所へ")
 
-try: API_KEY = st.secrets["OPENWEATHER_API_KEY"]
+try:
+    API_KEY = st.secrets["OPENWEATHER_API_KEY"]
 except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
@@ -75,13 +97,13 @@ stargazing_index_threshold = st.slider("最低限の空の晴れ具合（星空�
 st.info(f"目標の晴れ具合： **{get_star_index_description(stargazing_index_threshold)}**")
 
 st.header("② おすすめの場所を探す")
-# ★★★ ここを修正 ★★★
-col1, col2 = st.columns([1, 5])
+col1, col2 = st.columns([1, 4])
 with col1:
     location_data = streamlit_geolocation()
 with col2:
-    st.write("← 位置情報を許可してください☆")
-
+    st.markdown("### 📍 位置情報の許可をお願いします！")
+    st.write("左の位置情報マークをタップして、")
+    st.write("このページの位置情報利用を許可してください。")
 
 if location_data:
     if st.button("この条件に合う、一番近い場所を探す！"):
@@ -93,37 +115,29 @@ if location_data:
                 viable_spots = []
                 for spot in SPOTS:
                     astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
-                    time.sleep(0.2)
+                    time.sleep(0.2)  # API連続呼び出し負荷軽減
                     if astro_data:
-                        cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
+                        cloudiness = astro_data["current"]["clouds"]
+                        moon_phase = astro_data["daily"][0]["moon_phase"]
                         limiting_mag = estimate_limiting_magnitude(spot["darkness_level"], cloudiness, moon_phase)
-                        if limiting_mag < desired_magnitude: continue
+                        if limiting_mag < desired_magnitude:
+                            continue
                         star_index = calculate_star_index(cloudiness)
-                        if star_index < stargazing_index_threshold: continue
+                        if star_index < stargazing_index_threshold:
+                            continue
                         distance = calculate_distance(current_lat, current_lon, spot["lat"], spot["lon"])
                         viable_spots.append({
-                            "name": spot["name"], "distance": distance, "star_index": star_index,
-                            "limiting_mag": limiting_mag, "moon_phase": moon_phase
+                            "name": spot["name"],
+                            "distance": distance,
+                            "star_index": star_index,
+                            "limiting_mag": limiting_mag,
+                            "moon_phase": moon_phase,
+                            "hourly": astro_data.get("hourly", [])
                         })
+
             st.header("③ 検索結果")
             if not viable_spots:
                 st.warning("残念ながら、現在の条件に合うスポットは見つかりませんでした。条件を緩めて再検索してみてください。")
             else:
-                best_spot = sorted(viable_spots, key=lambda x: x["distance"])[0]
-                st.success(f"発見！あなたの条件に合う一番近い場所はこちらです！")
-                st.subheader(f"🏆 {best_spot['name']}")
-                st.write(f" - **あなたからの距離:** 約`{best_spot['distance']:.1f}` km")
-                st.markdown("---")
-                st.write(f"**星空指数:** `{best_spot['star_index']}` / 100点")
-                st.caption(get_star_index_description(best_spot['star_index']))
-                st.write(f"**見える星の明るさ:** 約`{best_spot['limiting_mag']:.1f}` 等級まで期待できます")
-                st.caption(get_magnitude_description(best_spot['limiting_mag']))
-                moon_name, moon_advice = get_moon_advice(best_spot['moon_phase'])
-                st.markdown("---")
-                st.subheader(f"🌕 月の様子")
-                st.info(f"今夜は『**{moon_name}**』です。\n\n{moon_advice}")
-                Maps_url = f"https://www.google.com/maps/search/?api=1&query={best_spot['name'].replace(' ', '+')}"
-                st.markdown(f"### [🗺️ Googleマップで場所を確認する]({Maps_url})")
-else:
-    st.info("ページ上部のボタンを押して、位置情報の使用を許可してください。")
-
+                # 距離でソートして上位3件を取得
+                top_spots = sorted(viable_spots, key=lambda x: x["distance
