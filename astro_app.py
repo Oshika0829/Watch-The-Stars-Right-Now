@@ -15,13 +15,15 @@ SPOTS = [
 
 # --- 関数エリア ---
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371
-    dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
+    R = 6371  # 地球の半径 (km)
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
 def get_astro_data(latitude, longitude, api_key):
+    # hourlyデータを取得するために、excludeから'hourly'を削除
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
     try:
         response = requests.get(url)
@@ -56,7 +58,7 @@ def get_star_index_description(index_value):
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
-
+    
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -68,18 +70,9 @@ def get_moon_advice(moon_phase):
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
 
-def display_weather_3h(hourly_data):
-    st.write("### 3時間分の天気変化（1時間毎）")
-    cols = st.columns(3)
-    for i in range(3):
-        hour = hourly_data[i]
-        time_str = time.strftime('%H:%M', time.localtime(hour["dt"]))
-        clouds = hour["clouds"]
-        temp = hour["temp"]
-        desc = f"{time_str}\n☁️雲量: {clouds}%\n🌡️気温: {temp:.1f}℃"
-        cols[i].write(desc)
-
 # --- アプリ本体 ---
+st.set_page_config(page_title="Catch The Stars Right Now!!!", page_icon="🌠")
+
 st.title("Watch The Stars Right Now!!!")
 st.write("今すぐ星が見える場所へ")
 
@@ -101,9 +94,8 @@ col1, col2 = st.columns([1, 4])
 with col1:
     location_data = streamlit_geolocation()
 with col2:
-    st.markdown("### 📍 位置情報の許可をお願いします！")
-    st.write("左の位置情報マークをタップして、")
-    st.write("このページの位置情報利用を許可してください。")
+    st.markdown("##### 📍 位置情報の許可を！")
+    st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
 
 if location_data:
     if st.button("この条件に合う、一番近い場所を探す！"):
@@ -115,7 +107,7 @@ if location_data:
                 viable_spots = []
                 for spot in SPOTS:
                     astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
-                    time.sleep(0.2)  # API連続呼び出し負荷軽減
+                    time.sleep(0.2)
                     if astro_data:
                         cloudiness = astro_data["current"]["clouds"]
                         moon_phase = astro_data["daily"][0]["moon_phase"]
@@ -127,17 +119,41 @@ if location_data:
                             continue
                         distance = calculate_distance(current_lat, current_lon, spot["lat"], spot["lon"])
                         viable_spots.append({
-                            "name": spot["name"],
-                            "distance": distance,
-                            "star_index": star_index,
-                            "limiting_mag": limiting_mag,
-                            "moon_phase": moon_phase,
-                            "hourly": astro_data.get("hourly", [])
+                            "name": spot["name"], "distance": distance, "star_index": star_index,
+                            "limiting_mag": limiting_mag, "moon_phase": moon_phase,
+                            "hourly_data": astro_data.get("hourly", []) # hourlyデータを保存
                         })
 
             st.header("③ 検索結果")
             if not viable_spots:
                 st.warning("残念ながら、現在の条件に合うスポットは見つかりませんでした。条件を緩めて再検索してみてください。")
             else:
-                # 距離でソートして上位3件を取得
-                top_spots = sorted(viable_spots, key=lambda x: x["distance
+                # 距離でソートして、上位3件までを取得
+                top_spots = sorted(viable_spots, key=lambda x: x["distance"])[:3]
+
+                st.success(f"発見！あなたの条件に合う場所が {len(top_spots)}件 見つかりました。")
+
+                # 見つかった場所を一つずつ表示
+                for i, spot in enumerate(top_spots):
+                    st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
+                    st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
+                    st.write(f" - **星空指数:** `{spot['star_index']}` / 100点 ({get_star_index_description(spot['star_index'])})")
+                    st.write(f" - **見える星の明るさ:** 約`{spot['limiting_mag']:.1f}` 等級まで期待できます")
+                    st.caption(get_magnitude_description(spot['limiting_mag']))
+
+                    # 3時間天気予報の表示
+                    if spot["hourly_data"]:
+                        st.write("**これからの天気（1時間ごと）**")
+                        cols = st.columns(3)
+                        for j in range(min(3, len(spot["hourly_data"]))):
+                            hour_data = spot["hourly_data"][j+1] # 1時間後から表示
+                            time_str = time.strftime('%H時', time.localtime(hour_data["dt"]))
+                            cols[j].metric(label=time_str, value=f"{hour_data['temp']:.1f}℃", delta=f"{hour_data['clouds']}% 雲")
+
+                    # Googleマップへのリンク
+                    Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['name'].replace(' ', '+')}"
+                    st.markdown(f"**[🗺️ Googleマップで場所を確認する]({Maps_url})**")
+                    st.divider()
+
+else:
+    st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
