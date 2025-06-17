@@ -59,7 +59,7 @@ def get_moon_advice(moon_phase):
     return name, advice
 
 # --- アプリ本体 ---
-st.title("Catch The Stars Right Now!!!")
+st.title("Watch The Stars Right Now!!!")
 st.write("今すぐ星が見える場所へ")
 
 try: API_KEY = st.secrets["OPENWEATHER_API_KEY"]
