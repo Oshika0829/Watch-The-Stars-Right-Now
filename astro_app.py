@@ -8,7 +8,6 @@ import pytz
 from timezonefinder import TimezoneFinder
 
 # --- データ定義 ---
-# ★★★ 日本全国・世界のスポットを、実用的な上限まで大幅に拡充 ★★★
 SPOTS = [
     # 日本 - 北海道・東北
     {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "sqm_level": 21.7},
@@ -39,26 +38,20 @@ SPOTS = [
     {"name": "波照間島（沖縄県）", "lat": 24.0560, "lon": 123.7745, "sqm_level": 21.8},
 
     # --- 世界 ---
-    # 北米
     {"name": "マウナケア山頂（アメリカ・ハワイ）", "lat": 19.8206, "lon": -155.4681, "sqm_level": 21.9},
     {"name": "デスバレー国立公園（アメリカ）", "lat": 36.5054, "lon": -117.0794, "sqm_level": 21.9},
     {"name": "チェリー・スプリングス州立公園（アメリカ）", "lat": 41.6601, "lon": -77.8251, "sqm_level": 21.8},
     {"name": "ジャスパー国立公園（カナダ）", "lat": 52.8734, "lon": -117.9543, "sqm_level": 21.8},
-    # 南米
     {"name": "アタカマ砂漠（チリ）", "lat": -24.5759, "lon": -69.2152, "sqm_level": 22.0},
     {"name": "セロ・トロロ汎米天文台（チリ）", "lat": -30.1691, "lon": -70.8062, "sqm_level": 21.9},
     {"name": "ウユニ塩湖（ボリビア）", "lat": -20.2582, "lon": -67.4891, "sqm_level": 21.8},
-    # オセアニア
     {"name": "アオラキ/マウント・クック（ニュージーランド）", "lat": -43.5950, "lon": 170.1419, "sqm_level": 21.8},
     {"name": "ワラバンバングル国立公園（オーストラリア）", "lat": -31.2720, "lon": 149.0060, "sqm_level": 21.7},
-    # ヨーロッパ
     {"name": "テイデ国立公園（スペイン・カナリア諸島）", "lat": 28.2721, "lon": -16.6435, "sqm_level": 21.6},
     {"name": "ギャロウェイ森林公園（スコットランド）", "lat": 55.1380, "lon": -4.4079, "sqm_level": 21.5},
     {"name": "ホルトバージ国立公園（ハンガリー）", "lat": 47.5800, "lon": 21.0600, "sqm_level": 21.4},
-    # アフリカ
     {"name": "ナミブランド自然保護区（ナミビア）", "lat": -25.2638, "lon": 16.0355, "sqm_level": 21.9},
     {"name": "南アフリカ大型望遠鏡（南アフリカ）", "lat": -32.3811, "lon": 20.8115, "sqm_level": 21.8},
-    # アジア
     {"name": "サガルマータ国立公園（ネパール・エベレスト）", "lat": 27.9791, "lon": 86.7214, "sqm_level": 22.0},
     {"name": "ゴビ砂漠（モンゴル）", "lat": 44.8863, "lon": 103.5874, "sqm_level": 21.9},
 ]
@@ -152,72 +145,72 @@ if location_data:
     if st.button("この条件に合う、一番近い場所を探す！"):
         if current_lat is None or current_lon is None: st.error("有効な位置情報が取得できませんでした。")
         else:
+            # ★★★ 検索ロジックを、厳密な500kmフィルターに戻しました ★★★
+            search_radius_km = 500
+            
+            # ステップ1: 距離が500km以内の候補地だけをまず絞り込む
             nearby_spots = []
             for spot in SPOTS:
                 distance = calculate_distance(current_lat, current_lon, spot["lat"], spot["lon"])
-                # 飛行機で行くような場所は、距離フィルターの対象外とする
-                if distance <= 2500:
+                if distance <= search_radius_km:
+                    spot['distance'] = distance # 距離情報をスポット辞書に追加
                     nearby_spots.append(spot)
-                    spot['distance'] = distance
-                # 海外のダークスカイサイトは常に候補に入れる
-                elif spot['sqm_level'] >= 21.5:
-                    nearby_spots.append(spot)
-                    spot['distance'] = distance
             
-            st.info(f"あなたの現在地から、{len(nearby_spots)}件の候補地を調査します...")
-            
-            with st.spinner("候補地の天気情報を収集中..."):
-                viable_spots = []
-                for spot in nearby_spots:
-                    astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
-                    if astro_data:
-                        cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
-                        estimated_sqm = estimate_sky_quality(spot["sqm_level"], cloudiness, moon_phase)
-                        if estimated_sqm < desired_sqm: continue
-                        star_index = calculate_star_index(cloudiness)
-                        if star_index < stargazing_index_threshold: continue
-                        viable_spots.append({
-                            "name": spot["name"], "lat": spot["lat"], "lon": spot["lon"],
-                            "distance": spot["distance"], "star_index": star_index,
-                            "estimated_sqm": estimated_sqm, "hourly_data": astro_data.get("hourly", [])
-                        })
-                    time.sleep(0.1)
-            st.header("③ 検索結果")
-            if not viable_spots:
-                st.warning("残念ながら、現在の条件に合うスポットは見つかりませんでした。条件を緩めて再検索してみてください。")
+            if not nearby_spots:
+                st.warning(f"半径{search_radius_km}km以内に、登録されている観測スポットがありませんでした。")
             else:
-                top_spots = sorted(viable_spots, key=lambda x: x["distance"])[:3]
-                st.success(f"発見！あなたの条件に合う場所が {len(viable_spots)}件 見つかりました。近い順に最大3件表示します。")
-                for i, spot in enumerate(top_spots):
-                    st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
-                    st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
-                    if spot['distance'] > 2500:
-                        travel_time_str = estimate_flight_time(spot['distance']); travel_type = "✈️ 飛行機での移動時間"
-                    else:
+                st.info(f"あなたの現在地から半径{search_radius_km}km以内にある{len(nearby_spots)}件の候補地を調査します...")
+                with st.spinner("候補地の天気情報を収集中..."):
+                    viable_spots = []
+                    for spot in nearby_spots: # 絞り込んだリストに対してループ
+                        astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
+                        if astro_data:
+                            cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
+                            estimated_sqm = estimate_sky_quality(spot["sqm_level"], cloudiness, moon_phase)
+                            if estimated_sqm < desired_sqm: continue
+                            star_index = calculate_star_index(cloudiness)
+                            if star_index < stargazing_index_threshold: continue
+                            
+                            viable_spots.append({
+                                "name": spot["name"], "lat": spot["lat"], "lon": spot["lon"],
+                                "distance": spot["distance"], "star_index": star_index,
+                                "estimated_sqm": estimated_sqm, "hourly_data": astro_data.get("hourly", [])
+                            })
+                        time.sleep(0.1)
+                
+                st.header("③ 検索結果")
+                if not viable_spots:
+                    st.warning("残念ながら、現在の条件に合うスポットは見つかりませんでした。条件を緩めて再検索してみてください。")
+                else:
+                    top_spots = sorted(viable_spots, key=lambda x: x["distance"])[:3]
+                    st.success(f"発見！あなたの条件に合う場所が {len(viable_spots)}件 見つかりました。近い順に最大3件表示します。")
+                    for i, spot in enumerate(top_spots):
+                        st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
+                        st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
                         travel_time_str = estimate_travel_time(spot['distance']); travel_type = "🚗 車での移動時間"
-                    st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
-                    st.markdown("---")
-                    st.write(f"**星空指数（晴れ具合）:** `{spot['star_index']}` / 100点")
-                    st.caption(get_star_index_description(spot['star_index']))
-                    st.write(f"**推定スカイクオリティ:** 約`{spot['estimated_sqm']:.2f}` SQM")
-                    st.caption(get_sqm_description(spot['estimated_sqm']))
-                    if spot.get("hourly_data"):
-                        st.write("**これからの天気（1時間ごと）**")
-                        cols = st.columns(3)
-                        for j in range(min(3, len(spot["hourly_data"]))):
-                            if j + 1 < len(spot["hourly_data"]):
-                                hour_data = spot["hourly_data"][j+1]
-                                utc_dt = datetime.fromtimestamp(hour_data["dt"], tz=pytz.utc)
-                                user_tz = pytz.timezone(selected_timezone)
-                                local_dt = utc_dt.astimezone(user_tz)
-                                time_str = local_dt.strftime('%H時')
-                                with cols[j]:
-                                    st.markdown(f"<div style='text-align: center;'>{time_str}</div>", unsafe_allow_html=True)
-                                    emoji = get_weather_emoji(hour_data["clouds"])
-                                    st.markdown(f"<div style='text-align: center; font-size: 2.5em; line-height: 1;'>{emoji}</div>", unsafe_allow_html=True)
-                                    st.markdown(f"<div style='text-align: center;'>{hour_data['clouds']}%</div>", unsafe_allow_html=True)
-                    Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['lat']},{spot['lon']}"
-                    st.markdown(f"**[🗺️ Googleマップで場所を確認する]({Maps_url})**")
-                    st.divider()
+                        st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
+                        st.markdown("---")
+                        st.write(f"**星空指数（晴れ具合）:** `{spot['star_index']}` / 100点")
+                        st.caption(get_star_index_description(spot['star_index']))
+                        st.write(f"**推定スカイクオリティ:** 約`{spot['estimated_sqm']:.2f}` SQM")
+                        st.caption(get_sqm_description(spot['estimated_sqm']))
+                        if spot.get("hourly_data"):
+                            st.write("**これからの天気（1時間ごと）**")
+                            cols = st.columns(3)
+                            for j in range(min(3, len(spot["hourly_data"]))):
+                                if j + 1 < len(spot["hourly_data"]):
+                                    hour_data = spot["hourly_data"][j+1]
+                                    utc_dt = datetime.fromtimestamp(hour_data["dt"], tz=pytz.utc)
+                                    user_tz = pytz.timezone(selected_timezone)
+                                    local_dt = utc_dt.astimezone(user_tz)
+                                    time_str = local_dt.strftime('%H時')
+                                    with cols[j]:
+                                        st.markdown(f"<div style='text-align: center;'>{time_str}</div>", unsafe_allow_html=True)
+                                        emoji = get_weather_emoji(hour_data["clouds"])
+                                        st.markdown(f"<div style='text-align: center; font-size: 2.5em; line-height: 1;'>{emoji}</div>", unsafe_allow_html=True)
+                                        st.markdown(f"<div style='text-align: center;'>{hour_data['clouds']}%</div>", unsafe_allow_html=True)
+                        Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['lat']},{spot['lon']}"
+                        st.markdown(f"**[🗺️ Googleマップで場所を確認する]({Maps_url})**")
+                        st.divider()
 else:
     st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
