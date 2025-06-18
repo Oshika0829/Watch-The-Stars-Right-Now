@@ -7,6 +7,7 @@ from datetime import datetime
 import pytz
 
 # --- データ定義 ---
+# ★★★ 世界最高クラスのスポットを追加 ★★★
 SPOTS = [
     # 日本 - 北海道・東北
     {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "darkness_level": 9},
@@ -15,37 +16,33 @@ SPOTS = [
     {"name": "奥日光・戦場ヶ原（栃木県）", "lat": 36.7915, "lon": 139.4210, "darkness_level": 9},
     {"name": "筑波山（茨城県）", "lat": 36.2239, "lon": 140.1130, "darkness_level": 8},
     {"name": "陣馬高原（東京/神奈川）", "lat": 35.6517, "lon": 139.1698, "darkness_level": 5},
-    {"name": "手賀沼公園（千葉県）", "lat": 35.8649, "lon": 140.0229, "darkness_level": 4},
-    {"name": "犬吠埼（千葉県）", "lat": 35.7084, "lon": 140.8603, "darkness_level": 7},
     # 日本 - 中部
     {"name": "富士山五合目（山梨/静岡）", "lat": 35.3620, "lon": 138.7303, "darkness_level": 9},
     {"name": "野辺山高原（長野県）", "lat": 35.9525, "lon": 138.4766, "darkness_level": 9},
     {"name": "阿智村（長野県）", "lat": 35.4372, "lon": 137.7567, "darkness_level": 9},
-    # 日本 - 関西
+    # 日本 - 関西・中国・四国・九州
     {"name": "大台ヶ原（奈良/三重）", "lat": 34.1923, "lon": 136.0883, "darkness_level": 8},
-    # 日本 - 中国・四国
-    {"name": "鳥取砂丘（鳥取県）", "lat": 35.5422, "lon": 134.2285, "darkness_level": 7},
     {"name": "四国カルスト（愛媛/高知）", "lat": 33.4975, "lon": 132.8953, "darkness_level": 8},
-    # 日本 - 九州・沖縄
-    {"name": "えびの高原（宮崎/鹿児島）", "lat": 31.9442, "lon": 130.8544, "darkness_level": 8},
-    {"name": "石西礁湖（沖縄県・星空保護区）", "lat": 24.3350, "lon": 123.9930, "darkness_level": 9},
+    {"name": "石垣島（沖縄県・星空保護区）", "lat": 24.4105, "lon": 124.1922, "darkness_level": 9},
     # 世界 - 北米
+    {"name": "マウナケア山頂（アメリカ・ハワイ）", "lat": 19.8206, "lon": -155.4681, "darkness_level": 10},
     {"name": "デスバレー国立公園（アメリカ）", "lat": 36.5054, "lon": -117.0794, "darkness_level": 10},
     {"name": "ジャスパー国立公園（カナダ）", "lat": 52.8734, "lon": -117.9543, "darkness_level": 9},
     # 世界 - 南米
     {"name": "アタカマ砂漠（チリ）", "lat": -24.5759, "lon": -69.2152, "darkness_level": 10},
+    {"name": "セロ・トロロ汎米天文台（チリ）", "lat": -30.1691, "lon": -70.8062, "darkness_level": 10},
     # 世界 - オセアニア
     {"name": "アオラキ/マウント・クック（ニュージーランド）", "lat": -43.5950, "lon": 170.1419, "darkness_level": 9},
-    {"name": "ワラバンバングル国立公園（オーストラリア）", "lat": -31.2720, "lon": 149.0060, "darkness_level": 9},
     # 世界 - ヨーロッパ
     {"name": "テイデ国立公園（スペイン・カナリア諸島）", "lat": 28.2721, "lon": -16.6435, "darkness_level": 9},
     # 世界 - アフリカ
     {"name": "ナミブランド自然保護区（ナミビア）", "lat": -25.2638, "lon": 16.0355, "darkness_level": 10},
+    {"name": "南アフリカ大型望遠鏡（南アフリカ）", "lat": -32.3811, "lon": 20.8115, "darkness_level": 10},
     # 世界 - アジア
     {"name": "サガルマータ国立公園（ネパール・エベレスト）", "lat": 27.9791, "lon": 86.7214, "darkness_level": 10},
 ]
 
-# --- 関数エリア ---
+# --- 関数エリア (以下、変更なし) ---
 @st.cache_data(ttl=600)
 def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
@@ -67,31 +64,34 @@ def estimate_travel_time(distance_km):
         minutes = total_minutes % 60
         return f"{hours}時間{minutes}分"
 
-# ★★★ 飛行機での移動時間を計算する新しい関数 ★★★
 def estimate_flight_time(distance_km):
-    avg_speed_kmh = 850 # 飛行機の平均速度
-    buffer_hours = 4 # 空港での手続きなどの時間
+    avg_speed_kmh = 850
+    buffer_hours = 4
     flight_hours = distance_km / avg_speed_kmh
     total_hours = flight_hours + buffer_hours
     return f"{int(total_hours)}時間（フライト）"
 
-# (ここから下の大部分の関数は変更なし)
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371
-    dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
     elif cloudiness <= 40: return 70
     elif cloudiness <= 70: return 40
     else: return 10
+
 def estimate_limiting_magnitude(darkness_level, cloudiness, moon_phase):
     base_mag = 2 + (darkness_level / 2)
     cloud_penalty = (cloudiness / 100) * 4
     moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 2
     limiting_magnitude = base_mag - cloud_penalty - moon_penalty
     return max(1.0, limiting_magnitude)
+
 def get_magnitude_description(magnitude):
     if magnitude < 2.0: return "都会の中心部レベル：1等星など、ごく明るい星がいくつか見える程度です。"
     elif magnitude < 3.0: return "都会の空レベル：オリオン座や北斗七星など、有名な星座の形が分かります。"
@@ -99,11 +99,13 @@ def get_magnitude_description(magnitude):
     elif magnitude < 5.0: return "暗い田舎の空レベル：たくさんの星が見え、天の川もぼんやりと見え始めます。"
     elif magnitude < 6.0: return "絶好の観測地レベル：天の川がはっきりと見え、流れ星にも期待が持てます。"
     else: return "最高クラスの星空：天の川の濃淡まで分かり、無数の星に圧倒される、一生に一度レベルの空です。"
+
 def get_star_index_description(index_value):
     if index_value >= 95: return "雲量10%以下。ほぼ雲のない快晴の空です。"
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
+    
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -114,6 +116,7 @@ def get_moon_advice(moon_phase):
     elif moon_phase == 0.75: name, advice = "下弦の月", "夜明け前に昇ってくる月なので、夜半までは月明かりの影響がありません。"
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
+
 def get_weather_emoji(cloudiness):
     if cloudiness < 20: return "☀️"
     elif cloudiness < 70: return "☁️"
@@ -132,7 +135,8 @@ st.header("① あなたの希望の条件は？")
 timezones = pytz.common_timezones
 default_tz_index = timezones.index('Asia/Tokyo') if 'Asia/Tokyo' in timezones else 0
 selected_timezone = st.selectbox(
-    'あなたのタイムゾーンを選んでください', options=timezones, index=default_tz_index
+    'あなたのタイムゾーンを選んでください', options=timezones, index=default_tz_index,
+    help="検索結果の時刻表示を、あなたの地域の時間に合わせます。"
 )
 desired_magnitude = st.slider("目標の星の等級（数字が大きいほど暗い星）", 1.0, 7.0, 4.0, 0.1)
 st.info(f"目標の明るさ： **{get_magnitude_description(desired_magnitude)}**")
@@ -146,6 +150,7 @@ with col1:
 with col2:
     st.markdown("##### 📍 位置情報の許可を！")
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
+
 if location_data:
     if st.button("この条件に合う、一番近い場所を探す！"):
         current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
@@ -177,8 +182,6 @@ if location_data:
                 for i, spot in enumerate(top_spots):
                     st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
                     st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
-                    
-                    # ★★★ ここで移動時間を自動で切り替える ★★★
                     if spot['distance'] > 2500:
                         travel_time_str = estimate_flight_time(spot['distance'])
                         travel_type = "飛行機での移動時間"
@@ -186,7 +189,6 @@ if location_data:
                         travel_time_str = estimate_travel_time(spot['distance'])
                         travel_type = "車での移動時間"
                     st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
-
                     st.markdown("---")
                     st.write(f"**星空指数:** `{spot['star_index']}` / 100点 ({get_star_index_description(spot['star_index'])})")
                     st.write(f"**見える星の明るさ:** 約`{spot['limiting_mag']:.1f}` 等級まで期待できます")
