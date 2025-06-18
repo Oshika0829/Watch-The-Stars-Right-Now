@@ -7,7 +7,6 @@ from datetime import datetime
 import pytz
 
 # --- データ定義 ---
-# ★★★ 世界最高クラスのスポットを追加 ★★★
 SPOTS = [
     # 日本 - 北海道・東北
     {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "darkness_level": 9},
@@ -42,7 +41,7 @@ SPOTS = [
     {"name": "サガルマータ国立公園（ネパール・エベレスト）", "lat": 27.9791, "lon": 86.7214, "darkness_level": 10},
 ]
 
-# --- 関数エリア (以下、変更なし) ---
+# --- 関数エリア (変更なし) ---
 @st.cache_data(ttl=600)
 def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
@@ -52,46 +51,37 @@ def get_astro_data(latitude, longitude, api_key):
         return response.json()
     except requests.exceptions.RequestException:
         return None
-
 def estimate_travel_time(distance_km):
     avg_speed_kmh = 40
     time_h = distance_km / avg_speed_kmh
     total_minutes = int(time_h * 60)
-    if total_minutes < 60:
-        return f"{total_minutes}分"
+    if total_minutes < 60: return f"{total_minutes}分"
     else:
         hours = total_minutes // 60
         minutes = total_minutes % 60
         return f"{hours}時間{minutes}分"
-
 def estimate_flight_time(distance_km):
     avg_speed_kmh = 850
     buffer_hours = 4
     flight_hours = distance_km / avg_speed_kmh
     total_hours = flight_hours + buffer_hours
     return f"{int(total_hours)}時間（フライト）"
-
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371
-    dLat = math.radians(lat2 - lat1)
-    dLon = math.radians(lon2 - lon1)
+    dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
     elif cloudiness <= 40: return 70
     elif cloudiness <= 70: return 40
     else: return 10
-
 def estimate_limiting_magnitude(darkness_level, cloudiness, moon_phase):
     base_mag = 2 + (darkness_level / 2)
     cloud_penalty = (cloudiness / 100) * 4
     moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 2
     limiting_magnitude = base_mag - cloud_penalty - moon_penalty
     return max(1.0, limiting_magnitude)
-
 def get_magnitude_description(magnitude):
     if magnitude < 2.0: return "都会の中心部レベル：1等星など、ごく明るい星がいくつか見える程度です。"
     elif magnitude < 3.0: return "都会の空レベル：オリオン座や北斗七星など、有名な星座の形が分かります。"
@@ -99,13 +89,11 @@ def get_magnitude_description(magnitude):
     elif magnitude < 5.0: return "暗い田舎の空レベル：たくさんの星が見え、天の川もぼんやりと見え始めます。"
     elif magnitude < 6.0: return "絶好の観測地レベル：天の川がはっきりと見え、流れ星にも期待が持てます。"
     else: return "最高クラスの星空：天の川の濃淡まで分かり、無数の星に圧倒される、一生に一度レベルの空です。"
-
 def get_star_index_description(index_value):
     if index_value >= 95: return "雲量10%以下。ほぼ雲のない快晴の空です。"
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
-    
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -116,7 +104,6 @@ def get_moon_advice(moon_phase):
     elif moon_phase == 0.75: name, advice = "下弦の月", "夜明け前に昇ってくる月なので、夜半までは月明かりの影響がありません。"
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
-
 def get_weather_emoji(cloudiness):
     if cloudiness < 20: return "☀️"
     elif cloudiness < 70: return "☁️"
@@ -132,12 +119,6 @@ except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
 st.header("① あなたの希望の条件は？")
-timezones = pytz.common_timezones
-default_tz_index = timezones.index('Asia/Tokyo') if 'Asia/Tokyo' in timezones else 0
-selected_timezone = st.selectbox(
-    'あなたのタイムゾーンを選んでください', options=timezones, index=default_tz_index,
-    help="検索結果の時刻表示を、あなたの地域の時間に合わせます。"
-)
 desired_magnitude = st.slider("目標の星の等級（数字が大きいほど暗い星）", 1.0, 7.0, 4.0, 0.1)
 st.info(f"目標の明るさ： **{get_magnitude_description(desired_magnitude)}**")
 stargazing_index_threshold = st.slider("最低限の空の晴れ具合（星空指数）", 0, 100, 70)
@@ -152,6 +133,16 @@ with col2:
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
 
 if location_data:
+    # ★★★ タイムゾーン選択を、ご指示通りここに移動しました ★★★
+    timezones = pytz.common_timezones
+    default_tz_index = timezones.index('Asia/Tokyo') if 'Asia/Tokyo' in timezones else 0
+    selected_timezone = st.selectbox(
+        'あなたのタイムゾーンを選んでください',
+        options=timezones,
+        index=default_tz_index,
+        help="検索結果の時刻表示を、あなたの地域の時間に合わせます。"
+    )
+    
     if st.button("この条件に合う、一番近い場所を探す！"):
         current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
         if current_lat is None or current_lon is None:
@@ -213,7 +204,7 @@ if location_data:
 
 st.divider()
 st.header("今日の月の様子 🌕")
-AMI_LAT, AMI_LON = 36.0317, 140.2107 
+AMI_LAT, AMI_LON = 36.0317, 140.2107
 moon_data = get_astro_data(AMI_LAT, AMI_LON, API_KEY)
 if moon_data:
     moon_phase = moon_data["daily"][0]["moon_phase"]
