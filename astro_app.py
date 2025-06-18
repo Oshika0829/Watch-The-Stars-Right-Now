@@ -82,9 +82,8 @@ def calculate_star_index(cloudiness):
     else: return 10
 
 def estimate_limiting_magnitude(darkness_level, cloudiness, moon_phase):
-    # ★★★ ここの計算式を修正 ★★★
-    base_mag = 3 + (darkness_level / 2) # 基礎点を1等級分引き上げ
-    
+    # 計算式を修正し、より高い等級が狙えるように調整
+    base_mag = 3 + (darkness_level / 2)
     cloud_penalty = (cloudiness / 100) * 4
     moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 2
     limiting_magnitude = base_mag - cloud_penalty - moon_penalty
@@ -130,14 +129,10 @@ except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
 st.header("① あなたの希望の条件は？")
-timezones = pytz.common_timezones
-default_tz_index = timezones.index('Asia/Tokyo') if 'Asia/Tokyo' in timezones else 0
-selected_timezone = st.selectbox(
-    'あなたのタイムゾーンを選んでください', options=timezones, index=default_tz_index,
-    help="検索結果の時刻表示を、あなたの地域の時間に合わせます。"
-)
-desired_magnitude = st.slider("目標の星の等級（数字が大きいほど暗い星）", 1.0, 7.5, 4.0, 0.1) # Maxを7.5に拡張
+
+desired_magnitude = st.slider("目標の星の等級（数字が大きいほど暗い星）", 1.0, 7.5, 4.0, 0.1)
 st.info(f"目標の明るさ： **{get_magnitude_description(desired_magnitude)}**")
+
 stargazing_index_threshold = st.slider("最低限の空の晴れ具合（星空指数）", 0, 100, 70)
 st.info(f"目標の晴れ具合： **{get_star_index_description(stargazing_index_threshold)}**")
 
@@ -150,6 +145,16 @@ with col2:
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
 
 if location_data:
+    # ★★★ タイムゾーン選択を、ご指示通りここに移動しました ★★★
+    timezones = pytz.common_timezones
+    default_tz_index = timezones.index('Asia/Tokyo') if 'Asia/Tokyo' in timezones else 0
+    selected_timezone = st.selectbox(
+        'あなたのタイムゾーンを選んでください',
+        options=timezones,
+        index=default_tz_index,
+        help="検索結果の時刻表示を、あなたの地域の時間に合わせます。"
+    )
+    
     if st.button("この条件に合う、一番近い場所を探す！"):
         current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
         if current_lat is None or current_lon is None:
