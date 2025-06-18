@@ -5,74 +5,79 @@ import math
 import time
 from datetime import datetime
 import pytz
-from timezonefinder import TimezoneFinder # ★★★ 新しいタイムゾーン判定用の道具 ★★★
+from timezonefinder import TimezoneFinder
 
-# --- データ定義 (変更なし) ---
+# --- データ定義 ---
+# SQM値ベースのスポットリスト
 SPOTS = [
-    # (スポットリストは長いので省略、変更なし)
-    {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "darkness_level": 9},
-    {"name": "浄土ヶ浜（岩手県）", "lat": 39.6425, "lon": 141.9723, "darkness_level": 8},
-    {"name": "奥日光・戦場ヶ原（栃木県）", "lat": 36.7915, "lon": 139.4210, "darkness_level": 9},
-    {"name": "筑波山（茨城県）", "lat": 36.2239, "lon": 140.1130, "darkness_level": 8},
-    {"name": "陣馬高原（東京/神奈川）", "lat": 35.6517, "lon": 139.1698, "darkness_level": 5},
-    {"name": "富士山五合目（山梨/静岡）", "lat": 35.3620, "lon": 138.7303, "darkness_level": 9},
-    {"name": "野辺山高原（長野県）", "lat": 35.9525, "lon": 138.4766, "darkness_level": 9},
-    {"name": "阿智村（長野県）", "lat": 35.4372, "lon": 137.7567, "darkness_level": 9},
-    {"name": "大台ヶ原（奈良/三重）", "lat": 34.1923, "lon": 136.0883, "darkness_level": 8},
-    {"name": "四国カルスト（愛媛/高知）", "lat": 33.4975, "lon": 132.8953, "darkness_level": 8},
-    {"name": "石垣島（沖縄県・星空保護区）", "lat": 24.4105, "lon": 124.1922, "darkness_level": 9},
-    {"name": "マウナケア山頂（アメリカ・ハワイ）", "lat": 19.8206, "lon": -155.4681, "darkness_level": 10},
-    {"name": "デスバレー国立公園（アメリカ）", "lat": 36.5054, "lon": -117.0794, "darkness_level": 10},
-    {"name": "ジャスパー国立公園（カナダ）", "lat": 52.8734, "lon": -117.9543, "darkness_level": 9},
-    {"name": "アタカマ砂漠（チリ）", "lat": -24.5759, "lon": -69.2152, "darkness_level": 10},
-    {"name": "セロ・トロロ汎米天文台（チリ）", "lat": -30.1691, "lon": -70.8062, "darkness_level": 10},
-    {"name": "アオラキ/マウント・クック（ニュージーランド）", "lat": -43.5950, "lon": 170.1419, "darkness_level": 9},
-    {"name": "テイデ国立公園（スペイン・カナリア諸島）", "lat": 28.2721, "lon": -16.6435, "darkness_level": 9},
-    {"name": "ナミブランド自然保護区（ナミビア）", "lat": -25.2638, "lon": 16.0355, "darkness_level": 10},
-    {"name": "南アフリカ大型望遠鏡（南アフリカ）", "lat": -32.3811, "lon": 20.8115, "darkness_level": 10},
-    {"name": "サガルマータ国立公園（ネパール・エベレスト）", "lat": 27.9791, "lon": 86.7214, "darkness_level": 10},
+    # 日本
+    {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "sqm_level": 21.7},
+    {"name": "奥日光・戦場ヶ原（栃木県）", "lat": 36.7915, "lon": 139.4210, "sqm_level": 21.5},
+    {"name": "阿智村（長野県）", "lat": 35.4372, "lon": 137.7567, "sqm_level": 21.6},
+    {"name": "野辺山高原（長野県）", "lat": 35.9525, "lon": 138.4766, "sqm_level": 21.4},
+    {"name": "富士山五合目（山梨/静岡）", "lat": 35.3620, "lon": 138.7303, "sqm_level": 21.3},
+    {"name": "大台ヶ原（奈良/三重）", "lat": 34.1923, "lon": 136.0883, "sqm_level": 21.2},
+    {"name": "四国カルスト（愛媛/高知）", "lat": 33.4975, "lon": 132.8953, "sqm_level": 21.3},
+    {"name": "石垣島（沖縄県・星空保護区）", "lat": 24.4105, "lon": 124.1922, "sqm_level": 21.7},
+    {"name": "筑波山（茨城県）", "lat": 36.2239, "lon": 140.1130, "sqm_level": 20.5},
+    # 世界
+    {"name": "マウナケア山頂（アメリカ・ハワイ）", "lat": 19.8206, "lon": -155.4681, "sqm_level": 21.9},
+    {"name": "デスバレー国立公園（アメリカ）", "lat": 36.5054, "lon": -117.0794, "sqm_level": 21.9},
+    {"name": "アタカマ砂漠（チリ）", "lat": -24.5759, "lon": -69.2152, "sqm_level": 22.0},
+    {"name": "ナミブランド自然保護区（ナミビア）", "lat": -25.2638, "lon": 16.0355, "sqm_level": 21.9},
+    {"name": "アオラキ/マウント・クック（ニュージーランド）", "lat": -43.5950, "lon": 170.1419, "sqm_level": 21.8},
+    {"name": "テイデ国立公園（スペイン・カナリア諸島）", "lat": 28.2721, "lon": -16.6435, "sqm_level": 21.6},
 ]
 
-# --- 関数エリア (変更なし) ---
+# --- 関数エリア ---
 @st.cache_data(ttl=600)
 def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
     try: response = requests.get(url); response.raise_for_status(); return response.json()
     except requests.exceptions.RequestException: return None
+
 def estimate_travel_time(distance_km):
     avg_speed_kmh = 40; time_h = distance_km / avg_speed_kmh; total_minutes = int(time_h * 60)
     if total_minutes < 60: return f"{total_minutes}分"
     else: hours = total_minutes // 60; minutes = total_minutes % 60; return f"{hours}時間{minutes}分"
+
 def estimate_flight_time(distance_km):
     avg_speed_kmh = 850; buffer_hours = 4; flight_hours = distance_km / avg_speed_kmh
     total_hours = flight_hours + buffer_hours; return f"{int(total_hours)}時間（フライト）"
+
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371; dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
+
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
     elif cloudiness <= 40: return 70
     elif cloudiness <= 70: return 40
     else: return 10
-def estimate_limiting_magnitude(darkness_level, cloudiness, moon_phase):
-    base_mag = 3 + (darkness_level / 2)
-    cloud_penalty = (cloudiness / 100) * 4
-    moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 2
-    limiting_magnitude = base_mag - cloud_penalty - moon_penalty
-    return max(1.0, limiting_magnitude)
-def get_magnitude_description(magnitude):
-    if magnitude < 2.0: return "都会の中心部レベル：1等星など、ごく明るい星がいくつか見える程度です。"
-    elif magnitude < 3.0: return "都会の空レベル：オリオン座や北斗七星など、有名な星座の形が分かります。"
-    elif magnitude < 4.0: return "郊外の空レベル：主要な星座はほとんど見え、天の川の存在がうっすら分かるかもしれません。"
-    elif magnitude < 5.0: return "暗い田舎の空レベル：たくさんの星が見え、天の川もぼんやりと見え始めます。"
-    elif magnitude < 6.0: return "絶好の観測地レベル：天の川がはっきりと見え、流れ星にも期待が持てます。"
-    else: return "最高クラスの星空：天の川の濃淡まで分かり、無数の星に圧倒される、一生に一度レベルの空です。"
+
+# ★★★ 推定SQMを計算する関数（「等級」から差し替え） ★★★
+def estimate_sky_quality(base_sqm, cloudiness, moon_phase):
+    moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 4
+    cloud_penalty = (cloudiness / 100) * 2
+    final_sqm = base_sqm - moon_penalty - cloud_penalty
+    return max(16.0, final_sqm)
+
+# ★★★ SQMの解説を返す関数 ★★★
+def get_sqm_description(sqm_value):
+    if sqm_value >= 21: return "天の川の複雑な構造が確認でき、星団などの観測ができます。"
+    elif sqm_value >= 20: return "山や海などの暗さ。天の川がよく見られます。"
+    elif sqm_value >= 19: return "郊外の暗さ。天の川が見え始めます。"
+    elif sqm_value >= 18: return "住宅地の明るさ。星座の形がよく分かります。"
+    elif sqm_value >= 17: return "市街地の明るさ。星座の形が分かり始めます。"
+    else: return "都心部の明るさ。星はほとんど見られません。"
+
 def get_star_index_description(index_value):
     if index_value >= 95: return "雲量10%以下。ほぼ雲のない快晴の空です。"
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
+    
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -83,6 +88,7 @@ def get_moon_advice(moon_phase):
     elif moon_phase == 0.75: name, advice = "下弦の月", "夜明け前に昇ってくる月なので、夜半までは月明かりの影響がありません。"
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
+
 def get_weather_emoji(cloudiness):
     if cloudiness < 20: return "☀️"
     elif cloudiness < 70: return "☁️"
@@ -92,68 +98,60 @@ def get_weather_emoji(cloudiness):
 st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon="🌠")
 st.title("🌠 Watch The Stars Right Now!!! 🔭")
 st.write("今すぐ星が見える場所へ")
-try:
-    API_KEY = st.secrets["OPENWEATHER_API_KEY"]
+try: API_KEY = st.secrets["OPENWEATHER_API_KEY"]
 except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
-st.header("① あなたの希望の条件は？")
 
-# ★★★ タイムゾーン選択を削除 ★★★
-# desired_magnitude = st.slider(...) 以下は変更なし
-desired_magnitude = st.slider("目標の空の暗さ（等級）", 1.0, 7.5, 4.0, 0.1)
-st.info(f"目標の明るさ： **{get_magnitude_description(desired_magnitude)}**")
+st.header("① あなたの希望の条件は？")
+# ★★★ 等級スライダーをSQMスライダーに修正 ★★★
+desired_sqm = st.slider("目標の空の暗さ（SQM値）", 17.0, 22.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
+st.info(f"目標の空： **{get_sqm_description(desired_sqm)}**")
 stargazing_index_threshold = st.slider("最低限の空の晴れ具合（星空指数）", 0, 100, 70)
 st.info(f"目標の晴れ具合： **{get_star_index_description(stargazing_index_threshold)}**")
 
 st.header("② おすすめの場所を探す")
 col1, col2 = st.columns([1, 4])
-with col1:
-    location_data = streamlit_geolocation()
+with col1: location_data = streamlit_geolocation()
 with col2:
     st.markdown("##### 📍 位置情報の許可を！")
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
 
 if location_data:
     current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
-    
-    # ★★★ 緯度経度からタイムゾーンを自動で判定 ★★★
     if current_lat and current_lon:
         tf = TimezoneFinder()
-        # タイムゾーン名を取得 (例: 'Asia/Tokyo')
         selected_timezone = tf.timezone_at(lng=current_lon, lat=current_lat)
-        if not selected_timezone:
-            selected_timezone = 'Asia/Tokyo' # もし見つからなければ東京をデフォルトに
+        if not selected_timezone: selected_timezone = 'Asia/Tokyo'
         
         with st.expander("今日のあなたの場所の月の様子は？ 🌕"):
-            # (月の表示ロジックは変更なし)
             moon_data = get_astro_data(current_lat, current_lon, API_KEY)
             if moon_data:
                 moon_phase = moon_data["daily"][0]["moon_phase"]
                 moon_name, moon_advice = get_moon_advice(moon_phase)
                 st.info(f"今夜は『**{moon_name}**』です。\n\n{moon_advice}")
-            else:
-                st.warning("月齢情報を取得できませんでした。")
+            else: st.warning("月齢情報を取得できませんでした。")
 
     if st.button("この条件に合う、一番近い場所を探す！"):
-        if current_lat is None or current_lon is None:
-            st.error("有効な位置情報が取得できませんでした。")
+        if current_lat is None or current_lon is None: st.error("有効な位置情報が取得できませんでした。")
         else:
             with st.spinner("各候補地の天気情報を収集中...（少し時間がかかります）"):
-                # (検索ロジックは変更なし)
                 viable_spots = []
                 for spot in SPOTS:
                     astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
                     if astro_data:
                         cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
-                        limiting_mag = estimate_limiting_magnitude(spot["darkness_level"], cloudiness, moon_phase)
-                        if limiting_mag < desired_magnitude: continue
+                        # ★★★ 判定ロジックをSQM基準に修正 ★★★
+                        estimated_sqm = estimate_sky_quality(spot["sqm_level"], cloudiness, moon_phase)
+                        if estimated_sqm < desired_sqm: continue
+                        
                         star_index = calculate_star_index(cloudiness)
                         if star_index < stargazing_index_threshold: continue
+                        
                         distance = calculate_distance(current_lat, current_lon, spot["lat"], spot["lon"])
                         viable_spots.append({
                             "name": spot["name"], "lat": spot["lat"], "lon": spot["lon"], "distance": distance, "star_index": star_index,
-                            "limiting_mag": limiting_mag, "moon_phase": moon_phase, "hourly_data": astro_data.get("hourly", [])
+                            "estimated_sqm": estimated_sqm, "hourly_data": astro_data.get("hourly", [])
                         })
                     time.sleep(0.1)
             st.header("③ 検索結果")
@@ -166,35 +164,34 @@ if location_data:
                     st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
                     st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
                     if spot['distance'] > 2500:
-                        travel_time_str = estimate_flight_time(spot['distance'])
-                        travel_type = "飛行機での移動時間"
+                        travel_time_str = estimate_flight_time(spot['distance']); travel_type = "飛行機での移動時間"
                     else:
-                        travel_time_str = estimate_travel_time(spot['distance'])
-                        travel_type = "車での移動時間"
+                        travel_time_str = estimate_travel_time(spot['distance']); travel_type = "車での移動時間"
                     st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
                     st.markdown("---")
-                    st.write(f"**星空指数:** `{spot['star_index']}` / 100点 ({get_star_index_description(spot['star_index'])})")
-                    st.write(f"**見える星の明るさ:** 約`{spot['limiting_mag']:.1f}` 等級まで期待できます")
-                    st.caption(get_magnitude_description(spot['limiting_mag']))
+                    
+                    # ★★★ 結果表示をSQM基準に修正 ★★★
+                    st.write(f"**星空指数（晴れ具合）:** `{spot['star_index']}` / 100点")
+                    st.caption(get_star_index_description(spot['star_index']))
+                    st.write(f"**推定スカイクオリティ:** 約`{spot['estimated_sqm']:.2f}` SQM")
+                    st.caption(get_sqm_description(spot['estimated_sqm']))
+
                     if spot["hourly_data"]:
                         st.write("**これからの天気（1時間ごと）**")
                         cols = st.columns(3)
                         for j in range(min(3, len(spot["hourly_data"]))):
                             hour_data = spot["hourly_data"][j+1]
-                            
-                            # ★★★ 自動判定されたタイムゾーンで時刻を変換 ★★★
                             utc_dt = datetime.fromtimestamp(hour_data["dt"], tz=pytz.utc)
-                            user_tz = pytz.timezone(selected_timezone) # 'selected_timezone'は自動判定されたもの
+                            user_tz = pytz.timezone(selected_timezone)
                             local_dt = utc_dt.astimezone(user_tz)
                             time_str = local_dt.strftime('%H時')
-                            
                             with cols[j]:
                                 st.markdown(f"<div style='text-align: center;'>{time_str}</div>", unsafe_allow_html=True)
                                 emoji = get_weather_emoji(hour_data["clouds"])
                                 st.markdown(f"<div style='text-align: center; font-size: 2.5em; line-height: 1;'>{emoji}</div>", unsafe_allow_html=True)
                                 st.markdown(f"<div style='text-align: center;'>{hour_data['clouds']}%</div>", unsafe_allow_html=True)
                     Maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['lat']},{spot['lon']}"
-                    st.markdown(f"[🗺️ Googleマップで場所を確認する]({Maps_url})")
+                    st.markdown(f"**[🗺️ Googleマップで場所を確認する]({Maps_url})**")
                     st.divider()
 else:
     st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
