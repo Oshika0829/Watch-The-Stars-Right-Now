@@ -8,10 +8,10 @@ import pytz
 from timezonefinder import TimezoneFinder
 
 # --- データ定義 ---
-# ★★★ 環境省「全国星空継続観察」の全データを反映 ★★★
+# ★★★ 環境省「全国星空継続観察」のデータを元に、日本のスポットを全面的に更新 ★★★
 SPOTS = [
-    # 出典：環境省「全国星空継続観察」結果 https://www.env.go.jp/press/press_00833.html
-    # PDF記載の日本の観測地全リスト
+    # 出典：環境省「全国星空継続観察」結果 https://www.env.go.jp/press/press_03979.html
+    # PDF記載の日本の観測地リスト
     {"name": "弟子屈町（北海道）", "lat": 43.4867, "lon": 144.4538, "sqm_level": 21.73},
     {"name": "足寄町（北海道）", "lat": 43.2453, "lon": 143.5517, "sqm_level": 21.81},
     {"name": "西目屋村（青森県）", "lat": 40.5517, "lon": 140.2858, "sqm_level": 21.43},
@@ -55,27 +55,33 @@ def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
     try: response = requests.get(url); response.raise_for_status(); return response.json()
     except requests.exceptions.RequestException: return None
+
 def estimate_travel_time(distance_km):
     avg_speed_kmh = 40; time_h = distance_km / avg_speed_kmh; total_minutes = int(time_h * 60)
     if total_minutes < 60: return f"{total_minutes}分"
     else: hours = total_minutes // 60; minutes = total_minutes % 60; return f"{hours}時間{minutes}分"
+
 def estimate_flight_time(distance_km):
     avg_speed_kmh = 850; buffer_hours = 4; flight_hours = distance_km / avg_speed_kmh
     total_hours = flight_hours + buffer_hours; return f"{int(total_hours)}時間（フライト）"
+
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371; dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
+
 def calculate_star_index(cloudiness):
     if cloudiness <= 10: return 100
     elif cloudiness <= 40: return 70
     elif cloudiness <= 70: return 40
     else: return 10
+
 def estimate_sky_quality(base_sqm, cloudiness, moon_phase):
     moon_penalty = (1 - abs(moon_phase - 0.5) * 2) * 4
     cloud_penalty = (cloudiness / 100) * 2
     final_sqm = base_sqm - moon_penalty - cloud_penalty
     return max(16.0, final_sqm)
+
 def get_sqm_description(sqm_value):
     if sqm_value >= 21: return "天の川の複雑な構造が確認でき、星団などの観測ができます。"
     elif sqm_value >= 20: return "山や海などの暗さ。天の川がよく見られます。"
@@ -83,11 +89,13 @@ def get_sqm_description(sqm_value):
     elif sqm_value >= 18: return "住宅地の明るさ。星座の形がよく分かります。"
     elif sqm_value >= 17: return "市街地の明るさ。星座の形が分かり始めます。"
     else: return "都心部の明るさ。星はほとんど見られません。"
+
 def get_star_index_description(index_value):
     if index_value >= 95: return "雲量10%以下。ほぼ雲のない快晴の空です。"
     elif index_value >= 65: return "雲量40%以下。雲はありますが、十分な晴れ間が期待できます。"
     elif index_value >= 35: return "雲量70%以下。雲が多めで、晴れ間を探して観測するイメージです。"
     else: return "雲量71%以上。ほぼ曇り空で、星を見るのはかなり困難です。"
+    
 def get_moon_advice(moon_phase):
     if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
     elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
@@ -98,6 +106,7 @@ def get_moon_advice(moon_phase):
     elif moon_phase == 0.75: name, advice = "下弦の月", "夜明け前に昇ってくる月なので、夜半までは月明かりの影響がありません。"
     else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
     return name, advice
+
 def get_weather_emoji(cloudiness):
     if cloudiness < 20: return "☀️"
     elif cloudiness < 70: return "☁️"
@@ -204,6 +213,9 @@ if location_data:
 else:
     st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
 
-# --- 出典表示 ---
+# ★★★ 出典表示に、ご指定のURLを追加 ★★★
 st.divider()
-st.caption("日本の観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の結果を参考にしています。")
+st.caption("""
+本サイトは、環境省「全国星空継続観察」の結果を加工して作成しています。
+参照元: https://www.env.go.jp/press/press_03979.html
+""")
