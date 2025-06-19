@@ -8,52 +8,45 @@ import pytz
 from timezonefinder import TimezoneFinder
 
 # --- データ定義 ---
+# ★★★ 環境省「全国星空継続観察」の全データを反映 ★★★
 SPOTS = [
-    # 日本 - 北海道・東北
-    {"name": "摩周湖（北海道）", "lat": 43.5855, "lon": 144.5694, "sqm_level": 21.7},
-    {"name": "浄土ヶ浜（岩手県）", "lat": 39.6425, "lon": 141.9723, "sqm_level": 20.8},
-    {"name": "蔵王（宮城県）", "lat": 38.1423, "lon": 140.4497, "sqm_level": 21.0},
-    {"name": "裏磐梯（福島県）", "lat": 37.6599, "lon": 140.0910, "sqm_level": 21.2},
-    # 日本 - 関東
-    {"name": "奥日光・戦場ヶ原（栃木県）", "lat": 36.7915, "lon": 139.4210, "sqm_level": 21.5},
-    {"name": "筑波山（茨城県）", "lat": 36.2239, "lon": 140.1130, "sqm_level": 20.5},
-    {"name": "陣馬高原（東京/神奈川）", "lat": 35.6517, "lon": 139.1698, "sqm_level": 19.5},
-    {"name": "堂平山（埼玉県）", "lat": 36.0195, "lon": 139.1838, "sqm_level": 20.8},
-    {"name": "犬吠埼（千葉県）", "lat": 35.7084, "lon": 140.8603, "sqm_level": 20.7},
-    # 日本 - 中部
-    {"name": "富士山五合目（山梨/静岡）", "lat": 35.3620, "lon": 138.7303, "sqm_level": 21.3},
-    {"name": "野辺山高原（長野県）", "lat": 35.9525, "lon": 138.4766, "sqm_level": 21.4},
-    {"name": "阿智村（長野県）", "lat": 35.4372, "lon": 137.7567, "sqm_level": 21.6},
-    {"name": "上高地（長野県）", "lat": 36.2494, "lon": 137.6335, "sqm_level": 21.7},
-    {"name": "白米千枚田（石川県）", "lat": 37.3896, "lon": 137.2915, "sqm_level": 21.1},
-    # 日本 - 関西
-    {"name": "大台ヶ原（奈良/三重）", "lat": 34.1923, "lon": 136.0883, "sqm_level": 21.2},
-    {"name": "星のブランコ（大阪府）", "lat": 34.8016, "lon": 135.7335, "sqm_level": 18.9},
-    # 日本 - 中国・四国
-    {"name": "鳥取砂丘（鳥取県）", "lat": 35.5422, "lon": 134.2285, "sqm_level": 20.9},
-    {"name": "四国カルスト（愛媛/高知）", "lat": 33.4975, "lon": 132.8953, "sqm_level": 21.3},
-    # 日本 - 九州・沖縄
-    {"name": "えびの高原（宮崎/鹿児島）", "lat": 31.9442, "lon": 130.8544, "sqm_level": 21.2},
-    {"name": "石垣島（沖縄県・星空保護区）", "lat": 24.4105, "lon": 124.1922, "sqm_level": 21.7},
-    {"name": "波照間島（沖縄県）", "lat": 24.0560, "lon": 123.7745, "sqm_level": 21.8},
-
-    # --- 世界 ---
-    {"name": "マウナケア山頂（アメリカ・ハワイ）", "lat": 19.8206, "lon": -155.4681, "sqm_level": 21.9},
-    {"name": "デスバレー国立公園（アメリカ）", "lat": 36.5054, "lon": -117.0794, "sqm_level": 21.9},
-    {"name": "チェリー・スプリングス州立公園（アメリカ）", "lat": 41.6601, "lon": -77.8251, "sqm_level": 21.8},
-    {"name": "ジャスパー国立公園（カナダ）", "lat": 52.8734, "lon": -117.9543, "sqm_level": 21.8},
-    {"name": "アタカマ砂漠（チリ）", "lat": -24.5759, "lon": -69.2152, "sqm_level": 22.0},
-    {"name": "セロ・トロロ汎米天文台（チリ）", "lat": -30.1691, "lon": -70.8062, "sqm_level": 21.9},
-    {"name": "ウユニ塩湖（ボリビア）", "lat": -20.2582, "lon": -67.4891, "sqm_level": 21.8},
-    {"name": "アオラキ/マウント・クック（ニュージーランド）", "lat": -43.5950, "lon": 170.1419, "sqm_level": 21.8},
-    {"name": "ワラバンバングル国立公園（オーストラリア）", "lat": -31.2720, "lon": 149.0060, "sqm_level": 21.7},
-    {"name": "テイデ国立公園（スペイン・カナリア諸島）", "lat": 28.2721, "lon": -16.6435, "sqm_level": 21.6},
-    {"name": "ギャロウェイ森林公園（スコットランド）", "lat": 55.1380, "lon": -4.4079, "sqm_level": 21.5},
-    {"name": "ホルトバージ国立公園（ハンガリー）", "lat": 47.5800, "lon": 21.0600, "sqm_level": 21.4},
-    {"name": "ナミブランド自然保護区（ナミビア）", "lat": -25.2638, "lon": 16.0355, "sqm_level": 21.9},
-    {"name": "南アフリカ大型望遠鏡（南アフリカ）", "lat": -32.3811, "lon": 20.8115, "sqm_level": 21.8},
-    {"name": "サガルマータ国立公園（ネパール・エベレスト）", "lat": 27.9791, "lon": 86.7214, "sqm_level": 22.0},
-    {"name": "ゴビ砂漠（モンゴル）", "lat": 44.8863, "lon": 103.5874, "sqm_level": 21.9},
+    # 出典：環境省「全国星空継続観察」結果 https://www.env.go.jp/press/press_00833.html
+    # PDF記載の日本の観測地全リスト
+    {"name": "弟子屈町（北海道）", "lat": 43.4867, "lon": 144.4538, "sqm_level": 21.73},
+    {"name": "足寄町（北海道）", "lat": 43.2453, "lon": 143.5517, "sqm_level": 21.81},
+    {"name": "西目屋村（青森県）", "lat": 40.5517, "lon": 140.2858, "sqm_level": 21.43},
+    {"name": "田野畑村（岩手県）", "lat": 39.9272, "lon": 141.9056, "sqm_level": 21.49},
+    {"name": "東成瀬村（秋田県）", "lat": 39.1557, "lon": 140.6626, "sqm_level": 21.36},
+    {"name": "片品村（群馬県）", "lat": 36.7686, "lon": 139.3621, "sqm_level": 21.48},
+    {"name": "神津島村（東京都）", "lat": 34.2155, "lon": 139.1360, "sqm_level": 21.69},
+    {"name": "山北町（神奈川県）", "lat": 35.3789, "lon": 139.0287, "sqm_level": 21.01},
+    {"name": "聖籠町（新潟県）", "lat": 37.9546, "lon": 139.2435, "sqm_level": 19.39},
+    {"name": "朝日町（富山県）", "lat": 36.9535, "lon": 137.5900, "sqm_level": 21.13},
+    {"name": "能登町（石川県）", "lat": 37.3328, "lon": 137.1517, "sqm_level": 21.21},
+    {"name": "南牧村（長野県）", "lat": 35.9754, "lon": 138.5621, "sqm_level": 21.52},
+    {"name": "川上村（長野県）", "lat": 35.9189, "lon": 138.6508, "sqm_level": 21.45},
+    {"name": "上松町（長野県）", "lat": 35.7725, "lon": 137.6974, "sqm_level": 21.37},
+    {"name": "白川村（岐阜県）", "lat": 36.2570, "lon": 136.9037, "sqm_level": 21.28},
+    {"name": "東伊豆町（静岡県）", "lat": 34.7709, "lon": 139.0560, "sqm_level": 21.15},
+    {"name": "上北山村（奈良県）", "lat": 34.1378, "lon": 136.0381, "sqm_level": 21.54},
+    {"name": "香美町（兵庫県）", "lat": 35.6027, "lon": 134.6158, "sqm_level": 21.20},
+    {"name": "若桜町（鳥取県）", "lat": 35.3400, "lon": 134.3986, "sqm_level": 21.26},
+    {"name": "隠岐の島町（島根県）", "lat": 36.2078, "lon": 133.3325, "sqm_level": 21.40},
+    {"name": "井原市（岡山県）", "lat": 34.5986, "lon": 133.4578, "sqm_level": 21.42},
+    {"name": "神石高原町（広島県）", "lat": 34.6644, "lon": 133.2750, "sqm_level": 21.25},
+    {"name": "上関町（山口県）", "lat": 33.8211, "lon": 132.0969, "sqm_level": 21.25},
+    {"name": "三好市（徳島県）", "lat": 33.9482, "lon": 133.8569, "sqm_level": 21.06},
+    {"name": "久万高原町（愛媛県）", "lat": 33.6823, "lon": 132.8953, "sqm_level": 21.32},
+    {"name": "大川村（高知県）", "lat": 33.7915, "lon": 133.3981, "sqm_level": 21.28},
+    {"name": "東峰村（福岡県）", "lat": 33.4475, "lon": 130.8716, "sqm_level": 21.05},
+    {"name": "上峰町（佐賀県）", "lat": 33.3242, "lon": 130.4079, "sqm_level": 18.99},
+    {"name": "対馬市（長崎県）", "lat": 34.2074, "lon": 129.2882, "sqm_level": 21.47},
+    {"name": "産山村（熊本県）", "lat": 32.9922, "lon": 131.1818, "sqm_level": 21.24},
+    {"name": "国東市（大分県）", "lat": 33.5601, "lon": 131.6963, "sqm_level": 21.07},
+    {"name": "高千穂町（宮崎県）", "lat": 32.7093, "lon": 131.3090, "sqm_level": 21.39},
+    {"name": "屋久島町（鹿児島県）", "lat": 30.3551, "lon": 130.5222, "sqm_level": 21.61},
+    {"name": "国頭村（沖縄県）", "lat": 26.7441, "lon": 128.1741, "sqm_level": 21.63},
+    {"name": "竹富町（沖縄県）", "lat": 24.3323, "lon": 123.8123, "sqm_level": 21.77},
 ]
 
 # --- 関数エリア (以下、変更なし) ---
@@ -145,15 +138,12 @@ if location_data:
     if st.button("この条件に合う、一番近い場所を探す！"):
         if current_lat is None or current_lon is None: st.error("有効な位置情報が取得できませんでした。")
         else:
-            # ★★★ 検索ロジックを、厳密な500kmフィルターに戻しました ★★★
             search_radius_km = 500
-            
-            # ステップ1: 距離が500km以内の候補地だけをまず絞り込む
             nearby_spots = []
             for spot in SPOTS:
                 distance = calculate_distance(current_lat, current_lon, spot["lat"], spot["lon"])
                 if distance <= search_radius_km:
-                    spot['distance'] = distance # 距離情報をスポット辞書に追加
+                    spot['distance'] = distance
                     nearby_spots.append(spot)
             
             if not nearby_spots:
@@ -162,7 +152,7 @@ if location_data:
                 st.info(f"あなたの現在地から半径{search_radius_km}km以内にある{len(nearby_spots)}件の候補地を調査します...")
                 with st.spinner("候補地の天気情報を収集中..."):
                     viable_spots = []
-                    for spot in nearby_spots: # 絞り込んだリストに対してループ
+                    for spot in nearby_spots:
                         astro_data = get_astro_data(spot["lat"], spot["lon"], API_KEY)
                         if astro_data:
                             cloudiness, moon_phase = astro_data["current"]["clouds"], astro_data["daily"][0]["moon_phase"]
@@ -170,7 +160,6 @@ if location_data:
                             if estimated_sqm < desired_sqm: continue
                             star_index = calculate_star_index(cloudiness)
                             if star_index < stargazing_index_threshold: continue
-                            
                             viable_spots.append({
                                 "name": spot["name"], "lat": spot["lat"], "lon": spot["lon"],
                                 "distance": spot["distance"], "star_index": star_index,
@@ -214,3 +203,7 @@ if location_data:
                         st.divider()
 else:
     st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
+
+# --- 出典表示 ---
+st.divider()
+st.caption("日本の観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の結果を参考にしています。")
