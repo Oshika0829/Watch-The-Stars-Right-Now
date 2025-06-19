@@ -222,7 +222,7 @@ def get_weather_emoji(cloudiness):
     else: return "🌧️"
 
 # --- アプリ本体 ---
-st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon=" ")
+st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon="🌠")
 st.title("🌠 Watch The Stars Right Now!!! 🔭")
 st.write("今すぐ星が見える場所へ")
 try:
@@ -230,7 +230,30 @@ try:
 except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
+    
+# --- サイドバー ---
+st.sidebar.header("運営者情報＆サポート")
+st.sidebar.info(
+    "このアプリは個人によって開発・運営されています。"
+    "API利用料などの運営費をご支援いただけると大変助かります！"
+)
 
+# ★★★ 寄付ボタンの設置 ★★★
+# Buy Me a Coffeeなどのサービスに登録し、生成されたHTMLコードをここに貼り付けてください。
+# 例: '<a href="https://www.buymeacoffee.com/your_id" target="_blank"><img src="..." alt="Buy Me A Coffee" ... ></a>'
+buy_me_a_coffee_html = """
+<a href="https://www.buymeacoffee.com/your_id" target="_blank" style="display: inline-block; padding: 10px 15px; background-color: #FFDD00; color: #000000; border-radius: 5px; text-decoration: none; font-weight: bold;">
+    ☕ 運営者にコーヒーをおごる
+</a>
+"""
+st.sidebar.markdown(buy_me_a_coffee_html, unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("ご意見・ご感想はこちらまで")
+st.sidebar.markdown("`oshika0829zan@gmail.com`")
+
+
+# --- メイン画面 ---
 st.header("① あなたの希望の条件は？")
 desired_sqm = st.slider("目標の空の暗さ（SQM値）", 15.0, 21.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
 st.info(f"{get_sqm_description(desired_sqm)}")
@@ -360,7 +383,7 @@ if location_data:
                         st.markdown("---")
                         st.write("**この場所をシェアする**")
                         share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#星空観測 #天体観測 #WatchTheStars\n"
-                        app_url = "https://your-streamlit-app-url.com"
+                        app_url = "https://your-streamlit-app-url.com" # ★★★ デプロイ後に実際のURLに書き換えてください ★★★
                         
                         encoded_text = urllib.parse.quote(share_text)
                         encoded_app_url = urllib.parse.quote(app_url)
@@ -383,4 +406,3 @@ st.caption("""
 観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の過去のデータを参考にしています。
 参照元: https://www.env.go.jp/press/press_03979.html
 """)
- 
