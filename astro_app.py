@@ -234,19 +234,16 @@ except (FileNotFoundError, KeyError):
 # --- サイドバー ---
 st.sidebar.header("運営者情報＆サポート")
 st.sidebar.info(
-    "このアプリは個人によって開発・運営されています。"
+    "このアプリは学生が個人で開発・運営しています。"
     "API利用料などの運営費をご支援いただけると大変助かります！"
 )
 
-# ★★★ 寄付ボタンの設置 ★★★
-# Buy Me a Coffeeなどのサービスに登録し、生成されたHTMLコードをここに貼り付けてください。
-# 例: '<a href="https://www.buymeacoffee.com/your_id" target="_blank"><img src="..." alt="Buy Me A Coffee" ... ></a>'
-buy_me_a_coffee_html = """
-<a href="https://www.buymeacoffee.com/your_id" target="_blank" style="display: inline-block; padding: 10px 15px; background-color: #FFDD00; color: #000000; border-radius: 5px; text-decoration: none; font-weight: bold;">
-    ☕ 運営者にコーヒーをおごる
-</a>
-"""
-st.sidebar.markdown(buy_me_a_coffee_html, unsafe_allow_html=True)
+# ★★★ Ofuseへのリンクボタン ★★★
+ofuse_link = "https://ofuse.me/fc89013b"
+st.sidebar.markdown(
+    f'<a href="{ofuse_link}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #007BFF; color: white; padding: 10px 20px; border-radius: 8px; text-align: center; font-weight: bold;">🎁 開発者を支援する (Ofuse)</a>',
+    unsafe_allow_html=True
+)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("ご意見・ご感想はこちらまで")
@@ -383,7 +380,7 @@ if location_data:
                         st.markdown("---")
                         st.write("**この場所をシェアする**")
                         share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#星空観測 #天体観測 #WatchTheStars\n"
-                        app_url = "https://your-streamlit-app-url.com" # ★★★ デプロイ後に実際のURLに書き換えてください ★★★
+                        app_url = "https://your-streamlit-app-url.com"
                         
                         encoded_text = urllib.parse.quote(share_text)
                         encoded_app_url = urllib.parse.quote(app_url)
