@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import pytz
 from timezonefinder import TimezoneFinder
+import urllib.parse
 
 # --- データ定義 (ユーザー提供のデータに全面的に刷新・最大限追加) ---
 SPOTS = [
@@ -221,7 +222,7 @@ def get_weather_emoji(cloudiness):
     else: return "🌧️"
 
 # --- アプリ本体 ---
-st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon="🌠")
+st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon=" ")
 st.title("🌠 Watch The Stars Right Now!!! 🔭")
 st.write("今すぐ星が見える場所へ")
 try:
@@ -231,7 +232,7 @@ except (FileNotFoundError, KeyError):
     st.stop()
 
 st.header("① あなたの希望の条件は？")
-desired_sqm = st.slider("目標の空の暗さ（SQM値）", 10.0, 21.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
+desired_sqm = st.slider("目標の空の暗さ（SQM値）", 15.0, 21.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
 st.info(f"{get_sqm_description(desired_sqm)}")
 
 cloud_slider_options = list(range(100, -1, -1))
@@ -351,6 +352,27 @@ if location_data:
 
                         maps_url = f"https://www.google.com/maps?q={spot['lat']},{spot['lon']}"
                         st.markdown(f"**[🗺️ Googleマップで場所を確認する]({maps_url})**")
+
+                        tag_name = spot['name'].split('（')[0].split('-')[0].strip()
+                        instagram_url = f"https://www.instagram.com/explore/tags/{urllib.parse.quote(tag_name)}/"
+                        st.markdown(f"**[📸 Instagramで「#{tag_name}」の写真を見る]({instagram_url})**")
+
+                        st.markdown("---")
+                        st.write("**この場所をシェアする**")
+                        share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#星空観測 #天体観測 #WatchTheStars\n"
+                        app_url = "https://your-streamlit-app-url.com"
+                        
+                        encoded_text = urllib.parse.quote(share_text)
+                        encoded_app_url = urllib.parse.quote(app_url)
+
+                        share_col1, share_col2, share_col3 = st.columns(3)
+                        with share_col1:
+                            st.markdown(f'<a href="https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #1DA1F2; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">Xでシェア</a>', unsafe_allow_html=True)
+                        with share_col2:
+                            st.markdown(f'<a href="https://www.facebook.com/sharer/sharer.php?u={encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #1877F2; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">Facebookでシェア</a>', unsafe_allow_html=True)
+                        with share_col3:
+                            st.markdown(f'<a href="https://line.me/R/msg/text/?{encoded_text}{encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #06C755; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">LINEでシェア</a>', unsafe_allow_html=True)
+                        
                         st.divider()
 else:
     st.info("ページ上部のマークを押して、位置情報の使用を許可してください。")
@@ -361,3 +383,4 @@ st.caption("""
 観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の過去のデータを参考にしています。
 参照元: https://www.env.go.jp/press/press_03979.html
 """)
+ 
