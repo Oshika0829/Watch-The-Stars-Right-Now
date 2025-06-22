@@ -1,3 +1,10 @@
+はい、承知いたしました。サイドバーの寄付に関する部分を削除し、指定されたnoteへのリンクを挿入します。
+
+以下が修正後のコードです。
+
+### 修正後のコード
+
+```python
 import streamlit as st
 import requests
 from streamlit_geolocation import streamlit_geolocation
@@ -176,8 +183,6 @@ SPOTS = [
     {"name": "本部町（沖縄県）", "lat": 26.6339, "lon": 127.8794, "sqm_level": 20.60},
     {"name": "竹富町（沖縄県）- 波照間島", "lat": 24.0558, "lon": 123.7788, "sqm_level": 21.40},
 ]
-
-
 # --- 関数エリア ---
 @st.cache_data(ttl=600)
 def get_astro_data(latitude, longitude, api_key):
@@ -204,17 +209,6 @@ def get_sqm_description(sqm_value):
     elif sqm_value >= 18.0: return "住宅地の明るさ。星座の形がよく分かります。"
     else: return "市街地の明るさ。主要な星や星座しか見えません。"
 
-def get_moon_advice(moon_phase):
-    if moon_phase == 0 or moon_phase == 1: name, advice = "新月", "月明かりがなく、星を見るには最高の条件です！"
-    elif 0 < moon_phase < 0.25: name, advice = "三日月", "月は細く、星空への影響はほとんどありません。"
-    elif moon_phase == 0.25: name, advice = "上弦の月", "夜半には月が沈むため、深夜以降の星空観測におすすめです。"
-    elif 0.25 < moon_phase < 0.5: name, advice = "十三夜", "月が明るくなってきました。淡い星は見えにくいかもしれません。"
-    elif moon_phase == 0.5: name, advice = "満月", "月が非常に明るく、天の川や淡い星を見るのは難しいでしょう。"
-    elif 0.5 < moon_phase < 0.75: name, advice = "十六夜（いざよい）", "月が明るいため、星空観測には少し不向きな時期です。"
-    elif moon_phase == 0.75: name, advice = "下弦の月", "夜明け前に昇ってくる月なので、夜半までは月明かりの影響がありません。"
-    else: name, advice = "有明の月", "月が昇るのが遅く、夜の早い時間帯は星空観測のチャンスです。"
-    return name, advice
-
 def get_weather_emoji(cloudiness):
     if cloudiness <= 10: return "☀️"
     elif cloudiness <= 50: return "🌤️"
@@ -222,29 +216,19 @@ def get_weather_emoji(cloudiness):
     else: return "🌧️"
 
 # --- アプリ本体 ---
-st.set_page_config(page_title="Watch The Stars Right Now!!!", page_icon="🌠")
-st.title("🌠 Watch The Stars Right Now!!! 🔭")
-st.write("今すぐ星が見える場所へ")
+st.set_page_config(page_title="ホシドコ - 星空スポット検索システム", page_icon="🌠") 
+st.title("🌠 ホシドコ 🔭") 
+st.subheader("星空スポット検索システム") 
+
 try:
     API_KEY = st.secrets["OPENWEATHER_API_KEY"]
 except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
     
-# --- サイドバー ---
-st.sidebar.header("運営者情報＆サポート")
-st.sidebar.info(
-    "このアプリは学生が個人で開発・運営しています。"
-    "API利用料などの運営費をご支援いただけると大変助かります！"
-)
-
-# ★★★ Ofuseへのリンクボタン ★★★
-ofuse_link = "https://ofuse.me/fc89013b"
-st.sidebar.markdown(
-    f'<a href="{ofuse_link}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #007BFF; color: white; padding: 10px 20px; border-radius: 8px; text-align: center; font-weight: bold;">🎁 開発者を支援する (Ofuse)</a>',
-    unsafe_allow_html=True
-)
-
+# --- サイドバー (修正) ---
+st.sidebar.header("運営者情報")
+st.sidebar.markdown("[📝 使い方や開発背景はこちら(note)](https://note.com/mute_murre9731/n/n163fc351ed30)")
 st.sidebar.markdown("---")
 st.sidebar.markdown("ご意見・ご感想はこちらまで")
 st.sidebar.markdown("`oshika0829zan@gmail.com`")
@@ -252,7 +236,7 @@ st.sidebar.markdown("`oshika0829zan@gmail.com`")
 
 # --- メイン画面 ---
 st.header("① あなたの希望の条件は？")
-desired_sqm = st.slider("目標の空の暗さ（SQM値）", 15.0, 21.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
+desired_sqm = st.slider("目標の空の暗さ（SQM値）", 15.0, 22.0, 19.0, 0.1, help="SQMは空の明るさを示す単位で、数値が高いほど暗く、星空観測に適しています。")
 st.info(f"{get_sqm_description(desired_sqm)}")
 
 cloud_slider_options = list(range(100, -1, -1))
@@ -273,16 +257,6 @@ with col2:
 
 if location_data:
     current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
-    if current_lat and current_lon:
-        tf = TimezoneFinder(); selected_timezone = tf.timezone_at(lng=current_lon, lat=current_lat)
-        if not selected_timezone: selected_timezone = 'Asia/Tokyo'
-        with st.expander("今日のあなたの場所の月の様子は？ 🌕"):
-            moon_data = get_astro_data(current_lat, current_lon, API_KEY)
-            if moon_data:
-                moon_phase = moon_data["daily"][0]["moon_phase"]
-                moon_name, moon_advice = get_moon_advice(moon_phase)
-                st.info(f"今夜は『**{moon_name}**』です。\n\n{moon_advice}")
-            else: st.warning("月齢情報を取得できませんでした。")
 
     if st.button("この条件に合う、一番近い場所を探す！"):
         if current_lat is None or current_lon is None: st.error("有効な位置情報が取得できませんでした。")
@@ -302,6 +276,7 @@ if location_data:
                 st.info(f"あなたの現在地から半径{search_radius_km}km以内にある{len(nearby_spots)}件の候補地を調査します...")
                 with st.spinner("候補地の天気情報を収集中..."):
                     viable_spots = []
+                    tf = TimezoneFinder() # TimezoneFinderを一度だけ初期化
                     for spot in nearby_spots:
                         if spot.get("sqm_level", 0) < desired_sqm:
                             continue
@@ -326,6 +301,11 @@ if location_data:
                 else:
                     top_spots = sorted(viable_spots, key=lambda x: x["distance"])[:3]
                     st.success(f"発見！あなたの条件に合う場所が {len(viable_spots)}件 見つかりました。近い順に最大3件表示します。")
+                    
+                    # タイムゾーン取得を一度に行う
+                    selected_timezone = tf.timezone_at(lng=current_lon, lat=current_lat)
+                    if not selected_timezone: selected_timezone = 'Asia/Tokyo'
+                    
                     for i, spot in enumerate(top_spots):
                         st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
                         st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
@@ -333,7 +313,7 @@ if location_data:
                         st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
                         st.markdown("---")
                         
-                        st.write(f"**基本スカイクオリティ:** `{spot['base_sqm']}` SQM")
+                        st.write(f"**空の暗さ（SQM値）:** `{spot['base_sqm']}` SQM") 
                         st.caption(get_sqm_description(spot['base_sqm']))
                         st.write(f"**現在の雲量:** `{spot['cloudiness']}` %")
 
@@ -358,10 +338,11 @@ if location_data:
                             st.write("**これからの天気（1時間ごと）**")
                             cols = st.columns(5)
                             hourly_data = spot["astro_data"]["hourly"]
+                            user_tz = pytz.timezone(selected_timezone)
+
                             for j in range(min(5, len(hourly_data) -1 )):
                                 hour_data = hourly_data[j+1]
                                 utc_dt = datetime.fromtimestamp(hour_data["dt"], tz=pytz.utc)
-                                user_tz = pytz.timezone(selected_timezone)
                                 local_dt = utc_dt.astimezone(user_tz)
                                 time_str = local_dt.strftime('%H時')
                                 with cols[j]:
@@ -370,7 +351,7 @@ if location_data:
                                     st.markdown(f"<div style='text-align: center; font-size: 2.5em; line-height: 1;'>{emoji}</div>", unsafe_allow_html=True)
                                     st.markdown(f"<div style='text-align: center;'>{hour_data['clouds']}%</div>", unsafe_allow_html=True)
 
-                        maps_url = f"https://www.google.com/maps?q={spot['lat']},{spot['lon']}"
+                        maps_url = f"https://www.google.com/maps/search/?api=1&query={spot['lat']},{spot['lon']}"
                         st.markdown(f"**[🗺️ Googleマップで場所を確認する]({maps_url})**")
 
                         tag_name = spot['name'].split('（')[0].split('-')[0].strip()
@@ -378,20 +359,22 @@ if location_data:
                         st.markdown(f"**[📸 Instagramで「#{tag_name}」の写真を見る]({instagram_url})**")
 
                         st.markdown("---")
-                        st.write("**この場所をシェアする**")
-                        share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#星空観測 #天体観測 #WatchTheStars\n"
-                        app_url = "https://your-streamlit-app-url.com"
+                        st.caption("この場所をシェアする") 
+                        share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#ホシドコ #星空観測 #天体観測\n"
+                        app_url = "https://your-streamlit-app-url.com" # TODO: ここにデプロイしたアプリのURLを記載
                         
                         encoded_text = urllib.parse.quote(share_text)
                         encoded_app_url = urllib.parse.quote(app_url)
+                        
+                        button_style = "display: inline-block; text-decoration: none; color: white; padding: 6px 10px; border-radius: 8px; text-align: center; font-size: 14px;"
 
-                        share_col1, share_col2, share_col3 = st.columns(3)
+                        share_col1, share_col2, share_col3, _ = st.columns([1,1,1,1]) 
                         with share_col1:
-                            st.markdown(f'<a href="https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #1DA1F2; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">Xでシェア</a>', unsafe_allow_html=True)
+                            st.markdown(f'<a href="https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_app_url}" target="_blank" style="{button_style} background-color: #1DA1F2;">Xでシェア</a>', unsafe_allow_html=True)
                         with share_col2:
-                            st.markdown(f'<a href="https://www.facebook.com/sharer/sharer.php?u={encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #1877F2; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">Facebookでシェア</a>', unsafe_allow_html=True)
+                            st.markdown(f'<a href="https://www.facebook.com/sharer/sharer.php?u={encoded_app_url}" target="_blank" style="{button_style} background-color: #1877F2;">Facebook</a>', unsafe_allow_html=True)
                         with share_col3:
-                            st.markdown(f'<a href="https://line.me/R/msg/text/?{encoded_text}{encoded_app_url}" target="_blank" style="display: inline-block; text-decoration: none; background-color: #06C755; color: white; padding: 8px 12px; border-radius: 10px; text-align: center;">LINEでシェア</a>', unsafe_allow_html=True)
+                            st.markdown(f'<a href="https://line.me/R/msg/text/?{encoded_text}{encoded_app_url}" target="_blank" style="{button_style} background-color: #06C755;">LINE</a>', unsafe_allow_html=True)
                         
                         st.divider()
 else:
@@ -403,3 +386,4 @@ st.caption("""
 観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の過去のデータを参考にしています。
 参照元: https://www.env.go.jp/press/press_03979.html
 """)
+```
