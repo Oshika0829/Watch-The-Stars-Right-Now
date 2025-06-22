@@ -1,10 +1,3 @@
-はい、承知いたしました。サイドバーの寄付に関する部分を削除し、指定されたnoteへのリンクを挿入します。
-
-以下が修正後のコードです。
-
-### 修正後のコード
-
-```python
 import streamlit as st
 import requests
 from streamlit_geolocation import streamlit_geolocation
@@ -183,22 +176,36 @@ SPOTS = [
     {"name": "本部町（沖縄県）", "lat": 26.6339, "lon": 127.8794, "sqm_level": 20.60},
     {"name": "竹富町（沖縄県）- 波照間島", "lat": 24.0558, "lon": 123.7788, "sqm_level": 21.40},
 ]
+
 # --- 関数エリア ---
 @st.cache_data(ttl=600)
 def get_astro_data(latitude, longitude, api_key):
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&exclude=minutely,alerts&appid={api_key}&lang=ja&units=metric"
-    try: response = requests.get(url); response.raise_for_status(); return response.json()
-    except requests.exceptions.RequestException: return None
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException:
+        return None
 
 def estimate_travel_time(distance_km):
-    avg_speed_kmh = 40; time_h = distance_km / avg_speed_kmh; total_minutes = int(time_h * 60)
-    if total_minutes < 60: return f"{total_minutes}分"
-    else: hours = total_minutes // 60; minutes = total_minutes % 60; return f"{hours}時間{minutes}分"
+    avg_speed_kmh = 40
+    time_h = distance_km / avg_speed_kmh
+    total_minutes = int(time_h * 60)
+    if total_minutes < 60:
+        return f"{total_minutes}分"
+    else:
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours}時間{minutes}分"
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371; dLat = math.radians(lat2 - lat1); dLon = math.radians(lon2 - lon1)
+    R = 6371
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
     a = math.sin(dLat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dLon / 2) ** 2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)); return R * c
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 def get_sqm_description(sqm_value):
     if sqm_value >= 21.75: return "光害が全くない最高の夜空。天の川が雲のように明るく見えるレベルです。"
@@ -216,23 +223,22 @@ def get_weather_emoji(cloudiness):
     else: return "🌧️"
 
 # --- アプリ本体 ---
-st.set_page_config(page_title="ホシドコ - 星空スポット検索システム", page_icon="🌠") 
-st.title("🌠 ホシドコ 🔭") 
-st.subheader("星空スポット検索システム") 
+st.set_page_config(page_title="ホシドコ - 星空スポット検索システム", page_icon="🌠")
+st.title("🌠 ホシドコ 🔭")
+st.subheader("星空スポット検索システム")
 
 try:
     API_KEY = st.secrets["OPENWEATHER_API_KEY"]
 except (FileNotFoundError, KeyError):
     st.error("【開発者向けエラー】secrets.tomlファイルまたはAPIキーの設定が見つかりません。")
     st.stop()
-    
-# --- サイドバー (修正) ---
+
+# --- サイドバー ---
 st.sidebar.header("運営者情報")
 st.sidebar.markdown("[📝 使い方や開発背景はこちら(note)](https://note.com/mute_murre9731/n/n163fc351ed30)")
 st.sidebar.markdown("---")
 st.sidebar.markdown("ご意見・ご感想はこちらまで")
 st.sidebar.markdown("`oshika0829zan@gmail.com`")
-
 
 # --- メイン画面 ---
 st.header("① あなたの希望の条件は？")
@@ -250,7 +256,8 @@ st.info(f"雲が{desired_cloud_cover}%以下の場所を探します。")
 
 st.header("② おすすめの場所を探す")
 col1, col2 = st.columns([1, 4])
-with col1: location_data = streamlit_geolocation()
+with col1:
+    location_data = streamlit_geolocation()
 with col2:
     st.markdown("##### 📍 位置情報の許可を！")
     st.caption("左のマークを押して、このサイトの位置情報利用を許可してください。")
@@ -259,7 +266,8 @@ if location_data:
     current_lat, current_lon = location_data.get('latitude'), location_data.get('longitude')
 
     if st.button("この条件に合う、一番近い場所を探す！"):
-        if current_lat is None or current_lon is None: st.error("有効な位置情報が取得できませんでした。")
+        if current_lat is None or current_lon is None:
+            st.error("有効な位置情報が取得できませんでした。")
         else:
             search_radius_km = 500
             
@@ -276,7 +284,7 @@ if location_data:
                 st.info(f"あなたの現在地から半径{search_radius_km}km以内にある{len(nearby_spots)}件の候補地を調査します...")
                 with st.spinner("候補地の天気情報を収集中..."):
                     viable_spots = []
-                    tf = TimezoneFinder() # TimezoneFinderを一度だけ初期化
+                    tf = TimezoneFinder()
                     for spot in nearby_spots:
                         if spot.get("sqm_level", 0) < desired_sqm:
                             continue
@@ -302,18 +310,19 @@ if location_data:
                     top_spots = sorted(viable_spots, key=lambda x: x["distance"])[:3]
                     st.success(f"発見！あなたの条件に合う場所が {len(viable_spots)}件 見つかりました。近い順に最大3件表示します。")
                     
-                    # タイムゾーン取得を一度に行う
                     selected_timezone = tf.timezone_at(lng=current_lon, lat=current_lat)
-                    if not selected_timezone: selected_timezone = 'Asia/Tokyo'
+                    if not selected_timezone:
+                        selected_timezone = 'Asia/Tokyo'
                     
                     for i, spot in enumerate(top_spots):
                         st.subheader(f"🏆 おすすめ No.{i+1}： {spot['name']}")
                         st.write(f" - **あなたからの距離:** 約`{spot['distance']:.1f}` km")
-                        travel_time_str = estimate_travel_time(spot['distance']); travel_type = "🚗 車での移動時間"
+                        travel_time_str = estimate_travel_time(spot['distance'])
+                        travel_type = "🚗 車での移動時間"
                         st.write(f" - **{travel_type}:** 約`{travel_time_str}`")
                         st.markdown("---")
                         
-                        st.write(f"**空の暗さ（SQM値）:** `{spot['base_sqm']}` SQM") 
+                        st.write(f"**空の暗さ（SQM値）:** `{spot['base_sqm']}` SQM")
                         st.caption(get_sqm_description(spot['base_sqm']))
                         st.write(f"**現在の雲量:** `{spot['cloudiness']}` %")
 
@@ -340,7 +349,7 @@ if location_data:
                             hourly_data = spot["astro_data"]["hourly"]
                             user_tz = pytz.timezone(selected_timezone)
 
-                            for j in range(min(5, len(hourly_data) -1 )):
+                            for j in range(min(5, len(hourly_data) - 1)):
                                 hour_data = hourly_data[j+1]
                                 utc_dt = datetime.fromtimestamp(hour_data["dt"], tz=pytz.utc)
                                 local_dt = utc_dt.astimezone(user_tz)
@@ -359,7 +368,7 @@ if location_data:
                         st.markdown(f"**[📸 Instagramで「#{tag_name}」の写真を見る]({instagram_url})**")
 
                         st.markdown("---")
-                        st.caption("この場所をシェアする") 
+                        st.caption("この場所をシェアする")
                         share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#ホシドコ #星空観測 #天体観測\n"
                         app_url = "https://your-streamlit-app-url.com" # TODO: ここにデプロイしたアプリのURLを記載
                         
@@ -368,7 +377,7 @@ if location_data:
                         
                         button_style = "display: inline-block; text-decoration: none; color: white; padding: 6px 10px; border-radius: 8px; text-align: center; font-size: 14px;"
 
-                        share_col1, share_col2, share_col3, _ = st.columns([1,1,1,1]) 
+                        share_col1, share_col2, share_col3, _ = st.columns([1,1,1,1])
                         with share_col1:
                             st.markdown(f'<a href="https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_app_url}" target="_blank" style="{button_style} background-color: #1DA1F2;">Xでシェア</a>', unsafe_allow_html=True)
                         with share_col2:
@@ -386,4 +395,3 @@ st.caption("""
 観測地点のスカイクオリティ(SQM)基準値は、環境省「全国星空継続観察」の過去のデータを参考にしています。
 参照元: https://www.env.go.jp/press/press_03979.html
 """)
-```
