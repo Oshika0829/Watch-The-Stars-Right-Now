@@ -370,7 +370,7 @@ if location_data:
                         st.markdown("---")
                         st.caption("この場所をシェアする")
                         share_text = f"おすすめの星空スポット【{spot['name']}】を見つけました！\n現在の雲量は{spot['cloudiness']}%、空の暗さは{spot['base_sqm']}SQMです。\nあなたも最高の星空を探しに行こう！\n#ホシドコ #星空観測 #天体観測\n"
-                        app_url = "https://your-streamlit-app-url.com" # TODO: ここにデプロイしたアプリのURLを記載
+                        app_url = "https://your-streamlit-app-url.com" # TODO: "https://hosidoko.streamlit.app/"
                         
                         encoded_text = urllib.parse.quote(share_text)
                         encoded_app_url = urllib.parse.quote(app_url)
