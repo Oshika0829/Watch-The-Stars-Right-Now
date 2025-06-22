@@ -223,9 +223,9 @@ def get_weather_emoji(cloudiness):
     else: return "🌧️"
 
 # --- アプリ本体 ---
-st.set_page_config(page_title="ホシドコ - 星空スポット検索システム", page_icon="🌠")
+st.set_page_config(page_title="ホシドコ - 雲量、暗さを指定後、天体観測地をご案内！", page_icon="🌠")
 st.title("🌠 ホシドコ 🔭")
-st.subheader("星空スポット検索システム")
+st.subheader("雲量、暗さを指定後、天体観測地をご案内！")
 
 try:
     API_KEY = st.secrets["OPENWEATHER_API_KEY"]
